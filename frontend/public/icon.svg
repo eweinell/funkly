@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#0d1013"/>
+  <rect x="10" y="14" width="44" height="18" rx="3" fill="#1a1206" stroke="#3a2c10" stroke-width="1.5"/>
+  <text x="32" y="28" font-family="monospace" font-size="13" fill="#ffb02e" text-anchor="middle" font-weight="bold">CH16</text>
+  <circle cx="22" cy="46" r="9" fill="#e8842c"/>
+  <circle cx="22" cy="46" r="9" fill="none" stroke="#a85c1a" stroke-width="2"/>
+  <rect x="38" y="40" width="16" height="12" rx="2" fill="#b3231f"/>
+  <path d="M40 40 l12 12 M52 40 l-12 12" stroke="#7d1512" stroke-width="1.5"/>
+</svg>
