@@ -1,0 +1,168 @@
+# Funkly Szenario — PAN PAN (Dringlichkeit) (UC-10)
+# Dringlichkeitsmeldung absetzen. Dringlichkeitsverkehr immer Englisch.
+schemaVersion: 2
+id: pan-pan
+useCase: UC-10
+module: src
+difficulty: intermediate
+languagePolicy: distress-english
+noiseLevel: 0.16
+maxReplays: null
+
+title:
+  en: Urgency message (PAN PAN)
+  de: Dringlichkeitsmeldung (PAN PAN)
+
+briefing:
+  en: >-
+    Engine failure — you are drifting off Fehmarn towards the shipping lane, but
+    there is no immediate danger to life. This is an urgency situation, not a
+    distress. Transmit a PAN PAN message on channel 16: PAN PAN x3, address, THIS
+    IS vessel x3, callsign/MMSI, position, nature of urgency, assistance
+    required, OVER. Urgency traffic is in English.
+  de: >-
+    Maschinenausfall — Sie treiben vor Fehmarn Richtung Schifffahrtsweg, aber es
+    besteht keine unmittelbare Lebensgefahr. Das ist ein Dringlichkeitsfall, kein
+    Notfall. Setzen Sie eine PAN-PAN-Meldung auf Kanal 16 ab: PAN PAN x3, Anrede,
+    THIS IS Schiff x3, Rufzeichen/MMSI, Position, Art der Dringlichkeit, erbetene
+    Hilfe, OVER. Dringlichkeitsverkehr auf Englisch.
+
+stations:
+  - id: bremen-rescue
+    name: Bremen Rescue Radio
+    role: >-
+      German MRCC (Bremen Rescue Radio) handling urgency traffic. Answers the
+      PAN PAN, may ask for missing detail (drift, persons, assistance needed),
+      and offers to arrange assistance or a tow. Calm, professional SMCP.
+    voice:
+      provider: polly
+      voiceId: Brian
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR, MOEWE, TARA]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821, DB6390, DE7154]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+  positionPool:
+    - en: 54 degrees 32 minutes north, 011 degrees 05 minutes east (approx. 5 NM north of Fehmarn)
+      de: 54 Grad 32 Minuten Nord, 011 Grad 05 Minuten Ost (ca. 5 sm noerdlich Fehmarn)
+    - en: 54 degrees 30 minutes north, 011 degrees 20 minutes east (Fehmarn Belt approaches)
+      de: 54 Grad 30 Minuten Nord, 011 Grad 20 Minuten Ost (Anlaeufe Fehmarnbelt)
+
+phases:
+  - id: urgency-call
+    expect: call
+    label:
+      en: PAN PAN call
+      de: PAN-PAN-Anruf
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      The trainee opens with PAN PAN spoken three times, addresses ALL STATIONS
+      (three times) or Bremen Rescue Radio, THIS IS, then own vessel name three
+      times, callsign/MMSI. Do not answer at length yet. Mark complete once PAN
+      PAN x3 and the identification are given.
+    hints:
+      en: "Start with PAN PAN three times, address All Stations or Bremen Rescue, THIS IS, then your vessel name three times and callsign."
+      de: "Beginne mit PAN PAN dreimal, richte an All Stations oder Bremen Rescue, THIS IS, dann Schiffsname dreimal und Rufzeichen."
+    sampleSolution:
+      en: "PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One, over."
+      de: "PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One, over."
+
+  - id: urgency-message
+    expect: message
+    label:
+      en: Urgency message
+      de: Dringlichkeitsmeldung
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      The trainee gives the urgency message: position, nature of urgency (engine
+      failure, drifting towards the shipping lane), persons on board, assistance
+      required (tow / stand by), OVER. Make clear this is NOT a distress. If an
+      element is missing, ask for it in character. Mark complete once the message
+      is sufficiently complete.
+    hints:
+      en: "Give position, nature of urgency (engine failure, drifting), persons on board and what assistance you need, then OVER."
+      de: "Nenne Position, Art der Dringlichkeit (Maschinenausfall, treibend), Personen an Bord und welche Hilfe du brauchst, dann OVER."
+    sampleSolution:
+      en: >-
+        My position is 54 degrees 32 minutes north, 011 degrees 05 minutes east.
+        Engine failure, drifting north towards the shipping lane, three persons
+        on board, no immediate danger. I require a tow to Burgstaaken. Over.
+      de: >-
+        My position is 54 degrees 32 minutes north, 011 degrees 05 minutes east.
+        Engine failure, drifting north towards the shipping lane, three persons
+        on board, no immediate danger. I require a tow to Burgstaaken. Over.
+
+  - id: acknowledge-close
+    expect: closing
+    label:
+      en: Acknowledge & close
+      de: Quittung & beenden
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      Answer the PAN PAN, confirm the details, and arrange assistance (e.g. a tow
+      or to stand by). The trainee acknowledges and stands by / agrees. Mark the
+      exercise complete once the urgency message is answered and the trainee
+      confirms. Set done.
+    hints:
+      en: "Acknowledge the arrangement and confirm you are standing by on channel 16."
+      de: "Bestaetige die Absprache und dass du auf Kanal 16 auf Empfang bleibst."
+    sampleSolution:
+      en: "Bremen Rescue Radio, this is Bluebird, roger, standing by on channel one-six, over."
+      de: "Bremen Rescue Radio, this is Bluebird, roger, standing by on channel one-six, over."
+
+rubric:
+  - id: pan-pan-structure
+    weight: 3
+    criterion:
+      en: "Urgency call: PAN PAN three times, address, THIS IS, own vessel three times, callsign/MMSI."
+      de: "Dringlichkeitsanruf: PAN PAN dreimal, Anrede, THIS IS, eigenes Schiff dreimal, Rufzeichen/MMSI."
+    appliesTo: [urgency-call]
+  - id: urgency-not-distress
+    weight: 2
+    criterion:
+      en: "Uses PAN PAN (urgency), not MAYDAY; the situation is framed as urgent, without immediate danger to life."
+      de: "Verwendet PAN PAN (Dringlichkeit), nicht MAYDAY; die Lage wird als dringlich ohne unmittelbare Lebensgefahr dargestellt."
+  - id: urgency-message-completeness
+    weight: 3
+    criterion:
+      en: "Message contains position, nature of urgency, persons on board and the assistance required."
+      de: "Meldung enthaelt Position, Art der Dringlichkeit, Personen an Bord und die erbetene Hilfe."
+    appliesTo: [urgency-message]
+  - id: english-throughout
+    weight: 1
+    criterion:
+      en: "English used throughout the urgency traffic, regardless of session language."
+      de: "Durchgehend Englisch im gesamten Dringlichkeitsverkehr, unabhaengig von der Sessionsprache."
+  - id: prowords-position
+    weight: 2
+    criterion:
+      en: "Position in a valid format; correct prowords and ending (OVER when a reply is expected)."
+      de: "Position in gueltigem Format; korrekte Prowords und Abschluss (OVER, wenn eine Antwort erwartet wird)."
+
+sampleSolution:
+  en: >-
+    PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS
+    sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One,
+    over. — My position is 54 degrees 32 minutes north, 011 degrees 05 minutes
+    east. Engine failure, drifting north towards the shipping lane, three persons
+    on board, no immediate danger. I require a tow to Burgstaaken. Over. —
+    (Bremen Rescue Radio acknowledges and arranges a tow.) — Bremen Rescue Radio,
+    this is Bluebird, roger, standing by on channel one-six, over.
+  de: >-
+    PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS
+    sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One,
+    over. — My position is 54 degrees 32 minutes north, 011 degrees 05 minutes
+    east. Engine failure, drifting north towards the shipping lane, three persons
+    on board, no immediate danger. I require a tow to Burgstaaken. Over. —
+    (Bremen Rescue Radio quittiert und organisiert einen Schlepper.) — Bremen
+    Rescue Radio, this is Bluebird, roger, standing by on channel one-six, over.
+    (Dringlichkeitsverkehr immer auf Englisch.)
+
+tags: [urgency, pan-pan, english-only, engine-failure]

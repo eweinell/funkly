@@ -1,0 +1,7 @@
+# Generiert aus content/scenarios/*.yaml (siehe scripts/build-content.mjs).
+# Muss vor `cdk synth`/`cdk deploy` per `npm run build` frisch erzeugt werden -
+# analog zu frontend/dist, das ebenfalls nicht committet wird.
+src/generated/
+
+# Nur fuer scripts/verify.mjs (Node-Skript-Nachweis ohne Testrunner).
+.verify-out/

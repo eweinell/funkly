@@ -1,0 +1,80 @@
+/* ==========================================================================
+   FUNKLY — globale Basis (Reset, Shell-Layout). Komponenten-Styles liegen als
+   CSS Modules neben den Komponenten (UI-SPEZIFIKATION.md §8).
+   ========================================================================== */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body, #root { height: 100%; }
+
+body {
+  background:
+    radial-gradient(1200px 600px at 70% -10%, #1c2329 0%, transparent 60%),
+    repeating-linear-gradient(0deg, transparent 0 2px, rgba(255, 255, 255, 0.008) 2px 4px),
+    #0d1013;
+  color: var(--text);
+  font-family: var(--font-label);
+  -webkit-font-smoothing: antialiased;
+}
+
+button { font: inherit; color: inherit; }
+
+.deck {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 20px 20px 48px;
+}
+@media (max-width: 900px) {
+  .deck { padding: 12px 12px calc(var(--bottom-bar-height) + 24px); }
+}
+
+/* ---------------- Markenleiste ---------------- */
+
+.brandbar {
+  display: flex; align-items: baseline; gap: 14px;
+  padding: 10px 4px 18px;
+  border-bottom: 1px solid #1e252b;
+  margin-bottom: 22px;
+}
+.brand {
+  font-size: 26px; font-weight: 700; letter-spacing: 0.35em;
+  color: var(--text);
+  text-shadow: 0 1px 0 #000;
+}
+.brand-sub { font-size: 11px; letter-spacing: 0.22em; color: var(--text-dim); flex: 1; }
+@media (max-width: 900px) {
+  .brand { font-size: 19px; letter-spacing: 0.22em; }
+  .brand-sub { display: none; }
+}
+
+.lang-switch { display: flex; gap: 2px; }
+.lang-switch button {
+  font-family: var(--font-label); font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
+  padding: 5px 14px; cursor: pointer;
+  color: var(--text-dim); background: var(--housing); border: 1px solid var(--bezel);
+}
+.lang-switch button.on { color: var(--lcd-amber); border-color: var(--lcd-amber-dim); background: #1a1a12; }
+
+/* ---------------- Layout ---------------- */
+
+.layout { display: grid; grid-template-columns: 430px 1fr; gap: 26px; align-items: start; }
+@media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+
+.error {
+  padding: 10px 14px; font-size: 13px; border-radius: var(--r-md);
+  color: #f2b8b5; background: #2a1413; border: 1px solid #5f2320;
+  font-family: var(--font-lcd);
+  word-break: break-all;
+}
+
+.screw {
+  position: absolute; width: 12px; height: 12px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a545c, #171c20 70%);
+  box-shadow: inset 0 -1px 2px rgba(0,0,0,.8);
+}
+.screw::after {
+  content: ""; position: absolute; inset: 4px 1px auto 1px; height: 2px;
+  background: #0b0e10; transform: rotate(38deg);
+}
+.screw.tl { top: 10px; left: 10px; } .screw.tr { top: 10px; right: 10px; }
+.screw.bl { bottom: 10px; left: 10px; } .screw.br { bottom: 10px; right: 10px; }

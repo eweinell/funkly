@@ -1,0 +1,13 @@
+.cancel {
+  margin-top: 10px;
+  font-family: var(--font-label);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  padding: 8px 14px;
+  cursor: pointer;
+  color: var(--text-dim);
+  background: var(--housing);
+  border: 1px solid var(--bezel);
+  border-radius: var(--r-sm);
+}

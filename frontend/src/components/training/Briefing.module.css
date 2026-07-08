@@ -1,0 +1,11 @@
+.briefing {
+  font-size: 13.5px; line-height: 1.5; color: var(--text);
+  padding: 13px 16px;
+  background: #10161a; border: 1px dashed #33414b; border-radius: var(--r-md);
+}
+.uc {
+  font-family: var(--font-lcd); font-size: 11px; color: var(--lcd-amber);
+  background: #1a1408; border: 1px solid #3a2c10; border-radius: 3px;
+  padding: 1px 6px; margin-right: 6px;
+}
+.header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }

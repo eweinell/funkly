@@ -1,0 +1,30 @@
+.lcd {
+  position: relative;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(0,0,0,.12) 3px 4px),
+    radial-gradient(140% 120% at 50% 0%, #241a08 0%, var(--lcd-bg) 55%);
+  border: 3px solid #0a0c0e;
+  border-radius: var(--r-md);
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255,255,255,.05);
+  padding: 14px 16px;
+  font-family: var(--font-lcd);
+  color: var(--lcd-amber);
+  text-shadow: 0 0 6px rgba(255, 176, 46, 0.45);
+}
+.row1 { display: flex; justify-content: space-between; align-items: baseline; }
+.ch { font-size: 44px; line-height: 1; }
+.status { font-size: 15px; color: var(--lcd-amber); }
+.status.blink { animation: blink 0.9s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0.25; } }
+.row2 { margin-top: 10px; font-size: 14px; letter-spacing: 0.06em; color: var(--lcd-amber); opacity: 0.85; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row3 { margin-top: 4px; font-size: 12px; color: var(--lcd-amber-dim); text-transform: uppercase; }
+
+.warning {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(26, 18, 6, 0.94);
+  font-size: 20px; font-weight: 700; letter-spacing: 0.14em;
+  color: var(--alarm); text-shadow: 0 0 10px rgba(255, 77, 61, 0.6);
+  border-radius: var(--r-md);
+  animation: blink 0.35s steps(2) infinite;
+}

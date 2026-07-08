@@ -1,0 +1,152 @@
+# Funkly Szenario — Positionsangaben (UC-05)
+# Position in den Pruefungsformaten absetzen: Lat/Lon und Peilung + Abstand.
+schemaVersion: 2
+id: position-report
+useCase: UC-05
+module: src
+difficulty: intermediate
+languagePolicy: bilingual
+noiseLevel: 0.10
+maxReplays: null
+
+title:
+  en: Reporting your position
+  de: Positionsangaben
+
+briefing:
+  en: >-
+    Practise reporting your position in the formats the exam expects: as
+    latitude and longitude (degrees and decimal minutes, spoken digit by digit),
+    and as a true bearing and distance from a known point. Then read back a
+    position you are given. Watch word order and the "decimal" sprechweise.
+  de: >-
+    Ueben Sie, Ihre Position in den Pruefungsformaten anzugeben: als geografische
+    Breite und Laenge (Grad und Dezimalminuten, ziffernweise gesprochen) und als
+    rechtweisende Peilung mit Abstand zu einem bekannten Punkt. Lesen Sie
+    anschliessend eine vorgegebene Position zurueck. Achten Sie auf Reihenfolge
+    und die "decimal"-Sprechweise.
+
+stations:
+  - id: instructor
+    name: Drill Instructor
+    role: >-
+      Radio-procedure instructor drilling position reports. Prompts one format
+      at a time and confirms briefly. Detailed corrections go through the
+      evaluation, not the spoken reply.
+    voice:
+      provider: polly
+      voiceId: Amy
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR, MOEWE, TARA]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821, DB6390, DE7154]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+  positionPool:
+    - en: 54 degrees 32 decimal 5 minutes north, 011 degrees 05 decimal 2 minutes east
+      de: 54 Grad 32 decimal 5 Minuten Nord, 011 Grad 05 decimal 2 Minuten Ost
+    - en: 54 degrees 09 decimal 8 minutes north, 012 degrees 06 decimal 1 minutes east (off Warnemuende)
+      de: 54 Grad 09 decimal 8 Minuten Nord, 012 Grad 06 decimal 1 Minuten Ost (vor Warnemuende)
+    - en: bearing 315 degrees from Kiel lighthouse, distance 4 nautical miles
+      de: Peilung 315 Grad von Leuchtturm Kiel, Abstand 4 Seemeilen
+    - en: bearing 090 degrees from Gedser, distance 6 nautical miles
+      de: Peilung 090 Grad von Gedser, Abstand 6 Seemeilen
+
+phases:
+  - id: position-latlon
+    expect: message
+    label:
+      en: Position as lat/lon
+      de: Position als Lat/Lon
+    station: instructor
+    direction: >-
+      Ask the trainee to report their current position as latitude and
+      longitude. Expect latitude first, then longitude, degrees and decimal
+      minutes spoken digit by digit, with hemisphere (north/south, east/west).
+      Confirm briefly. Mark complete when a correctly ordered lat/lon report has
+      been given.
+    hints:
+      en: "Latitude first, then longitude: degrees, then minutes digit by digit with 'decimal', then the hemisphere."
+      de: "Erst Breite, dann Laenge: Grad, dann Minuten ziffernweise mit 'decimal', dann die Himmelsrichtung."
+    sampleSolution:
+      en: "My position is 54 degrees 32 decimal 5 minutes north, 011 degrees 05 decimal 2 minutes east."
+      de: "Meine Position ist 54 Grad 32 decimal 5 Minuten Nord, 011 Grad 05 decimal 2 Minuten Ost."
+
+  - id: position-bearing
+    expect: message
+    label:
+      en: Position as bearing & distance
+      de: Position als Peilung & Abstand
+    station: instructor
+    direction: >-
+      Ask the trainee to give their position as a true bearing and distance from
+      a named fixed point (e.g. a lighthouse). Expect: bearing in three digits
+      (true) FROM the reference point, then distance in nautical miles. Mark
+      complete once a correctly formed bearing-and-distance report has been
+      given.
+    hints:
+      en: "State the true bearing in three digits FROM the landmark, then the distance in nautical miles."
+      de: "Nenne die rechtweisende Peilung dreistellig VON der Landmarke, dann den Abstand in Seemeilen."
+    sampleSolution:
+      en: "My position is bearing 315 degrees from Kiel lighthouse, distance 4 nautical miles."
+      de: "Meine Position ist Peilung 315 Grad von Leuchtturm Kiel, Abstand 4 Seemeilen."
+
+  - id: readback
+    expect: readback
+    label:
+      en: Read back a position
+      de: Position zuruecklesen
+    station: instructor
+    direction: >-
+      Transmit a position to the trainee (pick one from the session position
+      pool) and ask them to read it back. Mark complete once the trainee has
+      read the position back completely and in the correct order, digit by
+      digit. Set done.
+    hints:
+      en: "Read the position back exactly and in the same order, digit by digit."
+      de: "Lies die Position exakt und in derselben Reihenfolge zurueck, ziffernweise."
+    sampleSolution:
+      en: "I read back your position: bearing 090 degrees from Gedser, distance 6 nautical miles."
+      de: "Ich lese Ihre Position zurueck: Peilung 090 Grad von Gedser, Abstand 6 Seemeilen."
+
+rubric:
+  - id: latlon-format
+    weight: 3
+    criterion:
+      en: "Lat/lon in correct order (latitude before longitude), degrees and minutes digit by digit with 'decimal' and hemispheres."
+      de: "Lat/Lon in korrekter Reihenfolge (Breite vor Laenge), Grad und Minuten ziffernweise mit 'decimal' und Himmelsrichtungen."
+    appliesTo: [position-latlon]
+  - id: bearing-distance-format
+    weight: 3
+    criterion:
+      en: "Bearing and distance format: three-digit true bearing FROM the named point, then distance in nautical miles."
+      de: "Peilung-und-Abstand-Format: dreistellige rechtweisende Peilung VON dem benannten Punkt, dann Abstand in Seemeilen."
+    appliesTo: [position-bearing]
+  - id: readback-accuracy
+    weight: 2
+    criterion:
+      en: "Read-back reproduces the given position completely and in the correct order."
+      de: "Rueckgabe gibt die vorgegebene Position vollstaendig und in der richtigen Reihenfolge wieder."
+    appliesTo: [readback]
+  - id: decimal-sprechweise
+    weight: 2
+    criterion:
+      en: "Digits spoken individually and the decimal point spoken as 'decimal', not 'point' or 'comma'."
+      de: "Ziffern einzeln gesprochen und das Komma als 'decimal', nicht 'Punkt' oder 'Komma'."
+
+sampleSolution:
+  en: >-
+    My position is 54 degrees 32 decimal 5 minutes north, 011 degrees 05 decimal
+    2 minutes east. — My position is bearing 315 degrees from Kiel lighthouse,
+    distance 4 nautical miles. — Read-back: bearing 090 degrees from Gedser,
+    distance 6 nautical miles.
+  de: >-
+    Meine Position ist 54 Grad 32 decimal 5 Minuten Nord, 011 Grad 05 decimal 2
+    Minuten Ost. — Meine Position ist Peilung 315 Grad von Leuchtturm Kiel,
+    Abstand 4 Seemeilen. — Rueckgabe: Peilung 090 Grad von Gedser, Abstand 6
+    Seemeilen.
+
+tags: [drill, position, readback, intermediate]

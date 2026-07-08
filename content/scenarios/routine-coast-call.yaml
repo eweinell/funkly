@@ -1,0 +1,184 @@
+# Funkly Szenario — Routineanruf Kuestenfunkstelle (UC-02)
+# Migration aus backend/src/scenarios.ts (M1) auf Content-Schema v2.
+# Validierung: siehe content/SCHEMA.md ("Validierung").
+schemaVersion: 2
+id: routine-coast-call
+useCase: UC-02
+module: src
+difficulty: intermediate
+languagePolicy: bilingual
+noiseLevel: 0.15
+maxReplays: null
+
+title:
+  en: Routine call to a coast station
+  de: Routineanruf Kuestenfunkstelle
+
+briefing:
+  en: >-
+    You are underway in the Western Baltic. Call Lyngby Radio on channel 16, let
+    them assign you a working channel, switch over, and request the latest
+    weather report for the Western Baltic. Follow the channel-switching
+    instruction and close the exchange correctly.
+  de: >-
+    Sie sind in der westlichen Ostsee unterwegs. Rufen Sie Lyngby Radio auf
+    Kanal 16, lassen Sie sich einen Arbeitskanal zuweisen, wechseln Sie und
+    erbitten Sie den aktuellen Wetterbericht fuer die westliche Ostsee. Folgen
+    Sie der Kanalwechsel-Anweisung und beenden Sie den Verkehr korrekt.
+
+stations:
+  - id: lyngby-radio
+    name: Lyngby Radio
+    role: >-
+      Danish coast station handling routine VHF traffic. Calm, professional,
+      textbook SMCP phraseology. Assigns a working channel on first contact,
+      then delivers a short weather bulletin on the working channel.
+    voice:
+      provider: polly
+      voiceId: Amy
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR, MOEWE, TARA]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821, DB6390, DE7154]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+  workingChannelPool: [24, 25, 26, 27, 28]
+  positionPool:
+    - en: 54 degrees 32 minutes north, 011 degrees 05 minutes east (approx. 5 NM north of Fehmarn)
+      de: 54 Grad 32 Minuten Nord, 011 Grad 05 Minuten Ost (ca. 5 sm noerdlich Fehmarn)
+    - en: 54 degrees 30 minutes north, 010 degrees 42 minutes east (Kiel Bay)
+      de: 54 Grad 30 Minuten Nord, 010 Grad 42 Minuten Ost (Kieler Bucht)
+
+phases:
+  - id: call
+    expect: call
+    label:
+      en: Call on 16
+      de: Anruf auf 16
+    station: lyngby-radio
+    expectedChannel: 16
+    direction: >-
+      The trainee calls you on channel 16 with the full calling procedure
+      (station name 1-3x, THIS IS, own vessel + callsign 1-3x, a brief statement
+      of business or just "over"). Answer in character and assign a working
+      channel from the session working-channel value ("... change to channel
+      two-six, over"). Do not deliver the weather here. Mark complete when the
+      trainee has called correctly and you have assigned the working channel.
+    hints:
+      en: "Call Lyngby Radio, say THIS IS, give your vessel and callsign, request a working channel or state your business, then OVER."
+      de: "Rufe Lyngby Radio, sage THIS IS, nenne Schiff und Rufzeichen, erbitte einen Arbeitskanal oder nenne dein Anliegen, dann OVER."
+    sampleSolution:
+      en: "Lyngby Radio, Lyngby Radio, this is sailing yacht Bluebird, Delta Kilo Four Five One One, request a working channel for a weather report, over."
+      de: "Lyngby Radio, Lyngby Radio, hier ist Segelyacht Bluebird, Delta Kilo Four Five One One, ich erbitte einen Arbeitskanal fuer einen Wetterbericht, over."
+
+  - id: switch-channel
+    expect: switch-channel
+    label:
+      en: Confirm & switch
+      de: Bestaetigen & wechseln
+    station: lyngby-radio
+    expectedChannel: 16
+    direction: >-
+      The trainee must read back and confirm the assigned working channel
+      ("changing to channel two-six") before the exchange moves off 16. Keep
+      this short. Mark complete when the channel has been confirmed. The re-call
+      on the working channel happens in the next phase.
+    hints:
+      en: "Read back the assigned channel and confirm the switch, e.g. 'changing to channel two-six'."
+      de: "Lies den zugewiesenen Kanal zurueck und bestaetige den Wechsel, z. B. 'wechsle auf Kanal Zwei-Sechs'."
+    sampleSolution:
+      en: "Lyngby Radio, this is Bluebird, changing to channel two-six, over."
+      de: "Lyngby Radio, hier ist Bluebird, wechsle auf Kanal Zwei-Sechs, over."
+
+  - id: request
+    expect: message
+    label:
+      en: State the request
+      de: Anliegen absetzen
+    station: lyngby-radio
+    expectedChannel: 26
+    direction: >-
+      Now on the working channel. The trainee re-establishes contact and states
+      the request (weather report for the Western Baltic). Answer with a short,
+      realistic weather bulletin (wind, sea, visibility, outlook) in SMCP style.
+      Mark complete once you have delivered the bulletin. Note: the assigned
+      working channel varies per session; treat the session working channel as
+      the expected channel here.
+    hints:
+      en: "Re-call on the working channel and clearly state your request: the latest weather report for the Western Baltic."
+      de: "Rufe erneut auf dem Arbeitskanal und nenne dein Anliegen klar: den aktuellen Wetterbericht fuer die westliche Ostsee."
+    sampleSolution:
+      en: "Lyngby Radio, this is Bluebird, request the latest weather report for the Western Baltic, over."
+      de: "Lyngby Radio, hier ist Bluebird, ich erbitte den aktuellen Wetterbericht fuer die westliche Ostsee, over."
+
+  - id: closing
+    expect: closing
+    label:
+      en: Acknowledge & close
+      de: Bestaetigen & beenden
+    station: lyngby-radio
+    expectedChannel: 26
+    direction: >-
+      The trainee acknowledges the weather information and closes the exchange
+      with OUT (never "over and out"). Mark the exercise complete after a proper
+      closing. Set done.
+    hints:
+      en: "Acknowledge the weather report (e.g. 'received, thank you') and close with OUT."
+      de: "Bestaetige den Wetterbericht (z. B. 'verstanden, danke') und beende mit OUT."
+    sampleSolution:
+      en: "Lyngby Radio, this is Bluebird, received, thank you, out."
+      de: "Lyngby Radio, hier ist Bluebird, verstanden, danke, out."
+
+rubric:
+  - id: calling-structure
+    weight: 3
+    criterion:
+      en: "Calling structure and callsign repetitions: station first, THIS IS, own vessel and callsign in the correct order."
+      de: "Anrufstruktur und Rufzeichen-Wiederholungen: Station zuerst, THIS IS, eigenes Schiff und Rufzeichen in der richtigen Reihenfolge."
+  - id: channel-switch-discipline
+    weight: 3
+    criterion:
+      en: "Channel discipline: reads back the assigned working channel, confirms the switch, and re-establishes contact on the working channel."
+      de: "Kanaldisziplin: liest den zugewiesenen Arbeitskanal zurueck, bestaetigt den Wechsel und meldet sich auf dem Arbeitskanal erneut."
+    appliesTo: [switch-channel, request]
+  - id: request-clarity
+    weight: 2
+    criterion:
+      en: "Clear, brief statement of the request (weather report, Western Baltic)."
+      de: "Klare, knappe Formulierung des Anliegens (Wetterbericht, westliche Ostsee)."
+    appliesTo: [request]
+  - id: acknowledge-closing
+    weight: 2
+    criterion:
+      en: "Acknowledges the received information and closes properly with OUT (no 'over and out')."
+      de: "Bestaetigt die erhaltene Information und beendet korrekt mit OUT (kein 'over and out')."
+    appliesTo: [closing]
+  - id: prowords-phonetics
+    weight: 2
+    criterion:
+      en: "Correct prowords (OVER/OUT/THIS IS) and phonetic alphabet for the callsign; channel numbers spoken digit by digit."
+      de: "Korrekte Prowords (OVER/OUT/THIS IS) und Buchstabieralphabet fuer das Rufzeichen; Kanalnummern ziffernweise gesprochen."
+
+sampleSolution:
+  en: >-
+    Lyngby Radio, Lyngby Radio, this is sailing yacht Bluebird, Delta Kilo Four
+    Five One One, request a working channel for a weather report, over. —
+    (Lyngby Radio: Bluebird, this is Lyngby Radio, change to channel two-six,
+    over.) — Lyngby Radio, this is Bluebird, changing to channel two-six, over.
+    — (on 26) Lyngby Radio, this is Bluebird, request the latest weather report
+    for the Western Baltic, over. — (Lyngby Radio delivers the bulletin.) —
+    Lyngby Radio, this is Bluebird, received, thank you, out.
+  de: >-
+    Lyngby Radio, Lyngby Radio, hier ist Segelyacht Bluebird, Delta Kilo Four
+    Five One One, ich erbitte einen Arbeitskanal fuer einen Wetterbericht, over.
+    — (Lyngby Radio: Bluebird, hier ist Lyngby Radio, wechseln Sie auf Kanal
+    Zwei-Sechs, over.) — Lyngby Radio, hier ist Bluebird, wechsle auf Kanal
+    Zwei-Sechs, over. — (auf 26) Lyngby Radio, hier ist Bluebird, ich erbitte
+    den aktuellen Wetterbericht fuer die westliche Ostsee, over. — (Lyngby Radio
+    gibt den Wetterbericht.) — Lyngby Radio, hier ist Bluebird, verstanden,
+    danke, out.
+
+tags: [routine, coast-station, channel-switch, weather]

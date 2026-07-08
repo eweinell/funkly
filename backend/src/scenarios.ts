@@ -1,19 +1,142 @@
-export type Language = "en" | "de";
+/**
+ * Content-Paket-Loader (Welle 1).
+ *
+ * Szenarien liegen nicht mehr hart codiert hier, sondern als YAML unter
+ * `content/scenarios/*.yaml` (Vertrag: content/SCHEMA.md + content/schema/scenario.schema.json).
+ * Der Buildschritt `npm run build:content` (backend/scripts/build-content.mjs)
+ * buendelt alle YAML-Dateien zu `backend/src/generated/scenarios.generated.json`,
+ * das hier per JSON-Import geladen wird (esbuild inlined das beim Lambda-Bundling
+ * automatisch, keine separate Asset-Kopie noetig — siehe Abschlussbericht).
+ *
+ * Dieses Modul enthaelt bewusst nur reine Funktionen (kein Bedrock-/Polly-Call),
+ * damit Phasen-/Kanal-/Rubric-Logik ohne Netzwerkzugriff testbar ist
+ * (siehe backend/scripts/verify.mjs).
+ */
+import type { Channel, Language, RubricResult } from "./contracts";
 
-export interface Scenario {
-  id: string;
-  useCase: string;
-  title: Record<Language, string>;
-  briefing: Record<Language, string>;
-  /** Rollen-/Ablaufbeschreibung fuer das Modell (immer englisch formuliert) */
-  direction: string;
-  rubric: string[];
+// -- Content-Schema v2 (Laufzeit-Typen, gespiegelt aus content/schema/scenario.schema.json) --
+
+export interface LocalizedText {
+  en: string;
+  de: string;
 }
 
-/** Zufallshilfen, damit jede Session andere Stammdaten hat */
-const VESSELS = ["ALBATROS", "BLUEBIRD", "CALYPSO", "NORDWIND", "PELIKAN", "SEASTAR"];
-const CALLSIGNS = ["DK2077", "DL4511", "DM3082", "DJ5643", "DK8821"];
+export interface Voice {
+  provider?: "polly";
+  voiceId: string;
+  engine?: "neural" | "standard" | "generative";
+  language: "en-GB" | "en-US" | "de-DE";
+}
 
+export interface Station {
+  id: string;
+  name: string;
+  role: string;
+  voice: Voice;
+}
+
+export type PhaseExpect =
+  | "call"
+  | "switch-channel"
+  | "message"
+  | "readback"
+  | "closing"
+  | "dsc-alert"
+  | "dsc-ack"
+  | "dsc-individual"
+  | "dsc-cancel"
+  | "dictation"
+  | "listening"
+  | "translation"
+  | "free";
+
+export interface Phase {
+  id: string;
+  expect: PhaseExpect;
+  label: LocalizedText;
+  station?: string;
+  direction?: string;
+  expectedChannel?: Channel;
+  hints?: LocalizedText;
+  sampleSolution?: LocalizedText;
+  optional?: boolean;
+}
+
+export interface RubricCriterion {
+  id: string;
+  weight: number;
+  criterion: LocalizedText;
+  appliesTo?: string[];
+}
+
+export interface PositionValue {
+  latDeg: number;
+  latMin: number;
+  latHem: "N" | "S";
+  lonDeg: number;
+  lonMin: number;
+  lonHem: "E" | "W";
+}
+
+export interface Tolerance {
+  minutes?: number;
+  absolute?: number;
+}
+
+export interface DictationFieldOption {
+  value: string;
+  label: LocalizedText;
+}
+
+export interface DictationField {
+  id: string;
+  type: "text" | "mmsi" | "position" | "number" | "enum";
+  label: LocalizedText;
+  expected: string | number | PositionValue;
+  evalMode?: "exact" | "tolerant";
+  tolerance?: Tolerance;
+  options?: DictationFieldOption[];
+}
+
+export interface Dictation {
+  messageAudioText: LocalizedText;
+  fields: DictationField[];
+}
+
+export interface SetupMmsi {
+  midPrefix: string;
+  randomDigits?: number;
+}
+
+export interface ScenarioSetup {
+  vesselPool?: string[];
+  callsignPool?: string[];
+  mmsi?: SetupMmsi;
+  positionPool?: LocalizedText[];
+  workingChannelPool?: Channel[];
+}
+
+export interface Scenario {
+  schemaVersion: 2;
+  id: string;
+  useCase: string;
+  module: "src" | "ubi" | "bzf";
+  difficulty: "beginner" | "intermediate" | "advanced";
+  languagePolicy?: "bilingual" | "distress-english" | "session";
+  noiseLevel?: number;
+  maxReplays?: number | null;
+  title: LocalizedText;
+  briefing: LocalizedText;
+  stations: Station[];
+  setup?: ScenarioSetup;
+  phases: Phase[];
+  rubric: RubricCriterion[];
+  sampleSolution?: LocalizedText;
+  dictation?: Dictation;
+  tags?: string[];
+}
+
+/** Stammdaten einer Uebungssession (aus setup-Pools des Szenarios gezogen). */
 export interface SessionSetup {
   vessel: string;
   callsign: string;
@@ -21,113 +144,167 @@ export interface SessionSetup {
   position: string;
 }
 
-export function randomSetup(): SessionSetup {
-  const pick = <T>(a: T[]) => a[Math.floor(Math.random() * a.length)];
-  const mmsi = "211" + String(Math.floor(100000 + Math.random() * 899999));
-  return {
-    vessel: pick(VESSELS),
-    callsign: pick(CALLSIGNS),
-    mmsi,
-    position: "54 degrees 32 minutes north, 011 degrees 05 minutes east (approx. 5 NM north of Fehmarn)",
-  };
+// -- Laden des Content-Pakets --
+// `resolveJsonModule` liefert sonst einen aus der aktuellen Bundle-Datei
+// inferierten (zu engen) Literaltyp; wir erzwingen daher unsere eigenen,
+// breiteren Schema-Typen per Assertion.
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+import generatedBundle from "./generated/scenarios.generated.json";
+const bundle = generatedBundle as unknown as { schemaVersion: number; scenarios: Scenario[] };
+
+if (bundle.schemaVersion !== 2) {
+  throw new Error(
+    `content-Bundle hat schemaVersion ${bundle.schemaVersion}, erwartet 2. ` +
+      `'npm run build:content' erneut ausfuehren (content/scenarios/*.yaml -> backend/src/generated/scenarios.generated.json).`
+  );
 }
 
-export const SCENARIOS: Scenario[] = [
-  {
-    id: "radio-check",
-    useCase: "UC-01",
-    title: { en: "Radio Check", de: "Radio Check" },
-    briefing: {
-      en: "You are underway in the Baltic. Call Lyngby Radio on channel 16 and request a radio check. Use full calling procedure and prowords.",
-      de: "Sie sind in der Ostsee unterwegs. Rufen Sie Lyngby Radio auf Kanal 16 und bitten Sie um einen Radio Check. Nutzen Sie das vollstaendige Anrufschema und die Prowords.",
-    },
-    direction:
-      "You play the coast station 'Lyngby Radio'. The trainee should perform a correct radio check request: " +
-      "call (station name 1-3x, THIS IS, own vessel + callsign 1-3x, 'radio check' request, OVER). " +
-      "Reply with a readability report (e.g. 'I read you five') and close the exchange properly. " +
-      "The exercise is complete after your readability report and the trainee's proper closing (OUT).",
-    rubric: [
-      "calling structure (station called first, THIS IS, own name/callsign)",
-      "correct prowords (OVER / OUT, no 'roger over and out' nonsense)",
-      "phonetic alphabet for the callsign",
-      "brevity and channel discipline",
-    ],
-  },
-  {
-    id: "routine-coast-call",
-    useCase: "UC-02",
-    title: { en: "Routine call to coast station", de: "Routineanruf Kuestenfunkstelle" },
-    briefing: {
-      en: "Call Lyngby Radio on channel 16, ask for a working channel and request the latest weather report for the Western Baltic. Follow channel switching instructions.",
-      de: "Rufen Sie Lyngby Radio auf Kanal 16, lassen Sie sich einen Arbeitskanal zuweisen und erbitten Sie den aktuellen Wetterbericht fuer die westliche Ostsee. Folgen Sie den Kanalwechsel-Anweisungen.",
-    },
-    direction:
-      "You play the coast station 'Lyngby Radio'. Expected flow: (1) trainee calls you on channel 16 with full procedure, " +
-      "(2) you answer and assign working channel 26 ('go to channel two-six'), (3) trainee confirms the channel switch and calls again on the working channel, " +
-      "(4) trainee states the request (weather report Western Baltic), (5) you transmit a short weather report, " +
-      "(6) trainee acknowledges and closes with OUT. Mark the exercise complete after the proper closing.",
-    rubric: [
-      "calling structure and callsign repetitions",
-      "correct channel switch confirmation and re-call on working channel",
-      "clear, brief statement of the request",
-      "acknowledgement of received information and proper closing (OUT)",
-      "prowords and phonetic alphabet",
-    ],
-  },
-  {
-    id: "mayday",
-    useCase: "UC-07",
-    title: { en: "Distress call & message (MAYDAY)", de: "Notmeldung absetzen (MAYDAY)" },
-    briefing: {
-      en: "Fire on board, you must abandon the engine room. Transmit a complete distress call and distress message on channel 16. Scheme: MAYDAY x3 - vessel/callsign/MMSI x3 - MAYDAY + vessel - position - nature of distress - persons on board - assistance required - other info - OVER.",
-      de: "Feuer an Bord, der Maschinenraum musste aufgegeben werden. Setzen Sie einen vollstaendigen Notanruf und die Notmeldung auf Kanal 16 ab. Schema: MAYDAY x3 - Schiff/Rufzeichen/MMSI x3 - MAYDAY + Schiff - Position - Art der Not - Personen an Bord - erbetene Hilfe - weitere Angaben - OVER. (Notverkehr immer auf Englisch.)",
-    },
-    direction:
-      "You play the coast station 'Bremen Rescue Radio'. The trainee must transmit a complete distress call and message (always in English, regardless of session language). " +
-      "After a sufficiently complete distress message, acknowledge with the proper 'MAYDAY <vessel> ... THIS IS BREMEN RESCUE RADIO ... RECEIVED MAYDAY' scheme and ask one clarifying question if an element is missing. " +
-      "If essential elements are missing (position, nature of distress, persons on board), stay in character and request them ('say again your position'). " +
-      "Mark the exercise complete once the full distress message has been transmitted and acknowledged.",
-    rubric: [
-      "distress call: MAYDAY x3, vessel + callsign + MMSI x3",
-      "distress message: MAYDAY + vessel, position, nature of distress, persons on board, assistance required, OVER",
-      "position format (lat/lon or bearing/distance from a known point)",
-      "English language used throughout the distress traffic",
-      "no invented prowords, correct ending",
-    ],
-  },
-];
+const SCENARIOS: Scenario[] = bundle.scenarios;
+
+export function listScenarios(): Scenario[] {
+  return SCENARIOS;
+}
 
 export function getScenario(id: string): Scenario | undefined {
   return SCENARIOS.find((s) => s.id === id);
 }
 
-export function buildSystemPrompt(scenario: Scenario, language: Language, setup: SessionSetup): string {
-  const langNote =
-    language === "de"
-      ? "Session language is GERMAN: routine traffic and all feedback are in German. Distress/urgency/safety traffic remains in English per SRC standards."
-      : "Session language is ENGLISH: all radio traffic and feedback are in English.";
+// -- Zufalls-Stammdaten je Session, aus den setup-Pools des Szenarios --
 
-  return [
-    "You are the counterpart station in a VHF marine radio training simulator for the German SRC certificate (Short Range Certificate).",
-    "The trainee talks over a simulated half-duplex radio; you receive an imperfect speech-to-text transcript of their transmission.",
-    "",
-    `Trainee vessel for this session: sailing yacht ${setup.vessel}, callsign ${setup.callsign}, MMSI ${setup.mmsi}, position ${setup.position}.`,
-    "",
-    "SCENARIO: " + scenario.direction,
-    "",
-    "EVALUATION RUBRIC (score each transmission against these criteria):",
-    ...scenario.rubric.map((r) => "- " + r),
-    "",
-    "RULES:",
-    "- Stay strictly in character as the radio station in the 'reply' field. Keep replies short and realistic (IMO SMCP phraseology). No stage directions, no explanations in the reply.",
-    "- Be tolerant of speech-to-text artifacts: 'delta kilo two zero seven seven' may be transcribed oddly; judge intent, not spelling. Do not penalize obvious transcription noise.",
-    "- If the transmission is procedurally wrong or incomplete, react like a real station would (ask to 'say again', or respond to what was understandable) - the detailed correction belongs in the evaluation, not in the radio reply.",
-    "- " + langNote,
-    "",
-    "OUTPUT FORMAT: Respond with ONLY a single JSON object, no markdown fences, matching:",
-    '{"reply": "<your radio transmission as the station>",',
-    ' "evaluation": {"score": <0-100>, "findings": ["<specific issue or praise>", ...], "expected": "<model transmission the trainee should have sent>"},',
-    ' "done": <true when the exercise is complete, else false>}',
-    "Evaluation language: " + (language === "de" ? "German" : "English") + ".",
-  ].join("\n");
+function pick<T>(pool: T[]): T {
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+const FALLBACK_VESSEL_POOL = ["BLUEBIRD"];
+const FALLBACK_CALLSIGN_POOL = ["DL4511"];
+const FALLBACK_MMSI: SetupMmsi = { midPrefix: "211", randomDigits: 6 };
+const FALLBACK_POSITION: LocalizedText = {
+  en: "54 degrees 32 minutes north, 011 degrees 05 minutes east",
+  de: "54 Grad 32 Minuten Nord, 011 Grad 05 Minuten Ost",
+};
+
+export function randomSetup(scenario: Scenario, language: Language): SessionSetup {
+  const setup = scenario.setup;
+  const vessel = pick(setup?.vesselPool?.length ? setup.vesselPool : FALLBACK_VESSEL_POOL);
+  const callsign = pick(setup?.callsignPool?.length ? setup.callsignPool : FALLBACK_CALLSIGN_POOL);
+  const mmsiSpec = setup?.mmsi ?? FALLBACK_MMSI;
+  const digits = mmsiSpec.randomDigits ?? 6;
+  const max = Math.pow(10, digits) - 1;
+  const mmsi = mmsiSpec.midPrefix + String(Math.floor(Math.random() * (max + 1))).padStart(digits, "0");
+  const positionText = pick(setup?.positionPool?.length ? setup.positionPool : [FALLBACK_POSITION]);
+  return { vessel, callsign, mmsi, position: positionText[language] };
+}
+
+// -- Phasen-Tracking (Engine ist massgeblich, nicht das Modell) --
+
+export function findPhase(scenario: Scenario, phaseId?: string): { phase: Phase; index: number } {
+  if (phaseId) {
+    const index = scenario.phases.findIndex((p) => p.id === phaseId);
+    if (index >= 0) return { phase: scenario.phases[index], index };
+  }
+  return { phase: scenario.phases[0], index: 0 };
+}
+
+export function stationFor(scenario: Scenario, phase: Phase): Station {
+  const id = phase.station ?? scenario.stations[0]?.id;
+  return scenario.stations.find((s) => s.id === id) ?? scenario.stations[0];
+}
+
+export interface PhaseAdvance {
+  newIndex: number;
+  completedPhaseIds: string[];
+  scenarioDone: boolean;
+}
+
+/** Reine Fortschrittslogik: welche Phase gilt NACH diesem Turn. `phaseDone`
+ *  ist ein Signal des Dialogmodells, aber die Reihenfolge/Vollstaendigkeit
+ *  bestimmt ausschliesslich diese Funktion (Vertrag: Engine ist massgeblich). */
+export function advancePhase(scenario: Scenario, currentIndex: number, phaseDone: boolean): PhaseAdvance {
+  const completedPhaseIds = scenario.phases.slice(0, currentIndex).map((p) => p.id);
+  if (!phaseDone) {
+    return { newIndex: currentIndex, completedPhaseIds, scenarioDone: false };
+  }
+  completedPhaseIds.push(scenario.phases[currentIndex].id);
+  const isLast = currentIndex >= scenario.phases.length - 1;
+  return { newIndex: isLast ? currentIndex : currentIndex + 1, completedPhaseIds, scenarioDone: isLast };
+}
+
+// -- Kanal-Mechanik (UI-SPEZIFIKATION §1) --
+
+export type ChannelNoReplyReason = "wrong-channel" | "channel-70-voice-blocked";
+export type ChannelCheck = { ok: true } | { ok: false; reason: ChannelNoReplyReason };
+
+/** Phasentypen, die auf Kanal 70 (DSC-only) legitim sind. Fuer alle anderen
+ *  Phasentypen sperrt Kanal 70 den Sprechfunk, unabhaengig von expectedChannel. */
+const DSC_PHASE_TYPES = new Set<PhaseExpect>(["dsc-alert", "dsc-ack", "dsc-individual", "dsc-cancel"]);
+
+function normalizeChannel(channel: Channel): string {
+  return String(channel).trim().toUpperCase();
+}
+
+export function checkChannel(phase: Phase, channel: Channel): ChannelCheck {
+  const normalized = normalizeChannel(channel);
+  if (normalized === "70" && !DSC_PHASE_TYPES.has(phase.expect)) {
+    return { ok: false, reason: "channel-70-voice-blocked" };
+  }
+  if (phase.expectedChannel === undefined) return { ok: true };
+  if (normalizeChannel(phase.expectedChannel) !== normalized) {
+    return { ok: false, reason: "wrong-channel" };
+  }
+  return { ok: true };
+}
+
+// -- Rubric-Aggregation (Vertrag: Scores je Rubric-ID, Gesamtscore server-seitig
+//    aus den Einzelscores + Gewichten berechnet — nicht blind vom Modell uebernommen) --
+
+export function aggregateOverallScore(rubric: RubricResult[], criteria: RubricCriterion[]): number {
+  const weightById = new Map(criteria.map((c) => [c.id, c.weight]));
+  let sumWeight = 0;
+  let sumScore = 0;
+  for (const r of rubric) {
+    if (r.verdict === "n-a") continue;
+    const weight = weightById.get(r.id) ?? 1;
+    sumWeight += weight;
+    sumScore += weight * r.score;
+  }
+  if (sumWeight === 0) return 0;
+  return Math.round(sumScore / sumWeight);
+}
+
+/** Fallback-Rubric, falls die Modellantwort nicht (vollstaendig) geparst werden
+ *  konnte: ein "n-a"-Eintrag je Szenario-Rubric-ID statt Absturz. */
+export function fallbackRubric(scenario: Scenario, language: Language): RubricResult[] {
+  const finding = language === "de" ? "(Bewertung konnte nicht geparst werden)" : "(evaluation could not be parsed)";
+  return scenario.rubric.map((c) => ({ id: c.id, verdict: "n-a", score: 0, finding }));
+}
+
+/** Ergaenzt/bereinigt die vom Modell gelieferte Rubric-Liste: genau ein Eintrag
+ *  je Szenario-Rubric-ID, in Schema-Reihenfolge; unbekannte IDs werden verworfen,
+ *  fehlende als "n-a" ergaenzt (robustes Parsen statt Absturz). */
+export function reconcileRubric(scenario: Scenario, language: Language, modelRubric: unknown): RubricResult[] {
+  const byId = new Map<string, RubricResult>();
+  if (Array.isArray(modelRubric)) {
+    for (const entry of modelRubric) {
+      if (!entry || typeof entry !== "object") continue;
+      const id = String((entry as { id?: unknown }).id ?? "");
+      if (!id) continue;
+      const verdictRaw = String((entry as { verdict?: unknown }).verdict ?? "n-a");
+      const verdict = (["pass", "partial", "fail", "n-a"] as const).includes(verdictRaw as never)
+        ? (verdictRaw as RubricResult["verdict"])
+        : "n-a";
+      const scoreRaw = (entry as { score?: unknown }).score;
+      const score = verdict === "n-a" ? 0 : Number(scoreRaw ?? 0) || 0;
+      const finding = String((entry as { finding?: unknown }).finding ?? "");
+      byId.set(id, { id, verdict, score, finding });
+    }
+  }
+  const missingFinding =
+    language === "de" ? "(keine Bewertung fuer dieses Kriterium erhalten)" : "(no evaluation returned for this criterion)";
+  return scenario.rubric.map(
+    (c) => byId.get(c.id) ?? { id: c.id, verdict: "n-a", score: 0, finding: missingFinding }
+  );
+}
+
+export function localize(text: LocalizedText, language: Language): string {
+  return text[language];
 }

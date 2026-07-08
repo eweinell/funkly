@@ -1,0 +1,8 @@
+.line {
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--lcd-amber);
+  background: #1a1a12;
+  border-left: 3px solid var(--lcd-amber-dim);
+  border-radius: var(--r-sm);
+}

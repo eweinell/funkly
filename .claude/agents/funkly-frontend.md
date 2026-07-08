@@ -1,6 +1,6 @@
 ---
 name: funkly-frontend
-description: Funkly-Frontend-Arbeitspakete — DSC-Bedienteil und Feedback-Ausbau (Welle 1), danach Quiz/Diktat/Prüfungsmodus/PWA-Offline (Welle 2). Das konkrete Paket nennt der Auftraggeber.
+description: Funkly-Frontend-Arbeitspakete — DSC-Bedienteil und Feedback-Ausbau (Welle 1), danach Quiz/Diktat/Prüfungsmodus/PWA-Offline (Welle 2), plus Querschnittspaket Zugangsschutz V1 (Zugangscode-Gate + Header). Das konkrete Paket nennt der Auftraggeber.
 model: sonnet
 ---
 
@@ -10,33 +10,73 @@ Der Auftraggeber nennt dir dein Arbeitspaket; baue nur dieses Paket.
 
 ## Pflichtlektüre
 
-1. `UMSETZUNGSPLAN.md` — Pakete, Verträge (§3), Leitplanken (§4)
-2. `frontend/src/` komplett (v. a. `App.tsx`, `api.ts`, `audio/`)
-3. `KONZEPT.md` §3 (UI/UX-Vorgaben im Detail), `USE-CASES.md` (Akzeptanzkriterien)
-4. `backend/src/contracts.ts` — Turn-API v2, dein API-Vertrag
+1. `UI-SPEZIFIKATION.md` — **deine verbindliche Spezifikation** (Mechaniken §1–7,
+   Architektur §8); bei Widerspruch zu anderen Dokumenten gewinnt sie
+2. `UMSETZUNGSPLAN.md` — Pakete, Verträge (§3), Leitplanken (§4)
+3. `frontend/src/` komplett (v. a. `App.tsx`, `api.ts`, `audio/`)
+4. `KONZEPT.md` §3 (UI/UX-Vorgaben im Detail), `USE-CASES.md` (Akzeptanzkriterien)
+5. `backend/src/contracts.ts` — Turn-API v2, dein API-Vertrag
 
-## Paket Welle 1 — DSC & Feedback
+## Paket Welle 1 — Refactoring, dann DSC & Feedback
 
-- UC-13: DSC-Bedienteil — DISTRESS-Taste mit Klappabdeckung (3-Sekunden-Halten mit
-  Fortschrittsanzeige), Nature-of-Distress-Auswahl, simuliertes Controller-Display mit eigener
-  MMSI/Position; nach Alert Wechselaufforderung Kanal 16 → Übergang in Sprech-Szenario.
-- UC-14: eingehende DSC-Alerts auf dem Display darstellen (Alarmton!), Quittier-/
-  Verhaltenslogik gemäß Szenario.
-- UC-15: DSC-Routineanruf (Individual Call mit MMSI-Eingabe, Arbeitskanal-Vorschlag).
-- UC-22-Ausbau: Feedback-Panel zeigt Scores je Rubric-Kriterium (Turn-API v2) statt nur
-  Gesamtscore; Phasenfortschritt sichtbar; Panel einklappbar (Prüfungsmodus ohne Hilfen).
+- **Teilpaket 1 (zuerst, separat abgeben): Refactoring nach UI-SPEZIFIKATION §8** —
+  Komponentenstruktur, CSS Modules + `styles/tokens.css`, Session-Store (Context +
+  useReducer), `setPointerCapture` für PTT, Datei-Richtwert ~250 Zeilen. Akzeptanz:
+  identisches M1-Verhalten, keine neuen Features.
+- Kanal-Mechanik clientseitig (UI-SPEZIFIKATION §1): Kanal in den Turn-Request,
+  „keine Antwort auf falschem Kanal"-Darstellung, CH70-Sperre, Zifferneingabe.
+- UC-13/14/15: DSC-Bedienteil exakt nach UI-SPEZIFIKATION §2 (flaches Softkey-Modell,
+  Teilstrukturen `MmsiInput`/`PositionInput`, Distress-Ablauf, Alert-Overlay, Storno).
+- UC-22-Ausbau: Feedback-Panel v2 nach UI-SPEZIFIKATION §3 (Verdict-Ampeln je Rubric-ID,
+  Phasen-Stepper, drei Anzeigemodi).
+- Audio-Verhalten nach UI-SPEZIFIKATION §7 (Barge-in, Latenz-Kaschierung, VOL/SQL-Knöpfe,
+  `audio/sounds.ts`); Mobile-Regeln nach §6 (Bottom-Bar-PTT, Wake Lock, iOS-Audio-Unlock).
 
 ## Paket Welle 2 — Training & Prüfung
 
 - UC-19: Theorie-Quiz aus `content/quiz/*.json` mit Spaced Repetition (lokal via
   localStorage/IndexedDB; Sync auf DynamoDB-Fortschritt kommt über die Backend-API) und
   Prüfungsbogen-Modus (Zeitlimit, Bestehensgrenze).
-- UC-09/20: Diktat-/Hörverständnismodus — Audio abspielen (verrauscht via radioFx),
-  Notmeldeformular (MMSI, Position, Art der Not …), Absenden an Diktat-Endpoint,
-  Feld-für-Feld-Auswertung anzeigen.
-- UC-17: Prüfungsmodus — vier Praxisteile am Stück, ohne Feedback-Panel, Abschlussbericht.
+- UC-09/20: Diktat-/Hörverständnismodus nach UI-SPEZIFIKATION §4 — Audio abspielen
+  (verrauscht via radioFx, Replay-Zähler), Notmeldeformular aus den Teilstrukturen,
+  Feld-für-Feld-Auswertung mit Ampeln.
+- UC-17: Prüfungsmodus nach UI-SPEZIFIKATION §5 — Startscreen, Panel-Modus „Prüfung",
+  Abschlussbericht mit Ampel-Matrix.
 - UC-24: Einstellungen (Sprache, Stimme, Rauschpegel, STT-Sparmodus via Web Speech API).
+  **Nutzeridentität (entschieden):** Geräte-UUID beim ersten Start erzeugen
+  (`crypto.randomUUID()`), in localStorage halten, in Fortschritts-Requests mitsenden.
 - UC-26: PWA-Offline für Theorie-Quiz (Fragenkatalog + Quiz-Logik im Cache).
+
+## Paket Zugangsschutz V1 (Querschnitt — API-Vertrag mit `funkly-backend`/`funkly-infra`)
+
+Kontext: V1 hat **kein Login**. Damit die offene API nicht per geleakter URL Kosten erzeugt,
+fragt das Frontend einmalig einen geteilten Zugangscode ab und schickt ihn als Header mit. Kein
+echtes Login-UI, keine Cognito-Anbindung (das ist V2/UC-27).
+
+### Gemeinsamer Vertrag „Zugangsschutz V1" (identisch in allen drei Briefings, nicht abweichen)
+
+- Header `x-funkly-access` — **dein Teil**: der geteilte Zugangscode, an jede API-Anfrage.
+- Header `x-funkly-origin` — setzt **CloudFront** serverseitig, NICHT der Client. Nicht anfassen.
+- Backend antwortet **401** bei fehlendem/falschem Zugangscode, **403** bei fehlender/falscher
+  Origin (Direktzugriff am CloudFront vorbei). Body je `{ error: "..." }`.
+
+### Dein Anteil (nur unter `frontend/`)
+
+- Header `x-funkly-access` an **jeder** API-Anfrage mitschicken — zentral in `request()` in
+  `api.ts`, nicht je Aufruf. `x-funkly-origin` NICHT setzen.
+- Zugangscode einmalig abfragen: kleines Gate vor dem Funkgerät-UI (schlicht, im Stil der
+  UI-SPEZIFIKATION — **kein** `window.prompt`). Wert in `localStorage` unter eigenem Schlüssel
+  (z. B. `funkly.accessCode`), neben der bereits geplanten Geräte-UUID (Welle 2). Ist ein Code
+  gespeichert, direkt starten.
+- Bei **401** einer beliebigen Antwort: gespeicherten Code verwerfen und das Gate erneut zeigen
+  („Code ungültig"). **403** ist ein Infra-/Direktzugriffsfehler (fehlendes Origin-Secret) — als
+  allgemeiner Verbindungsfehler behandeln, NICHT als falschen Code (sonst löscht ein Fehlbetrieb
+  unnötig den korrekten Code).
+- Dev-Mock unter `frontend/dev/` ignoriert den Header (kein echter Schutz lokal); der Gate-Screen
+  darf im Dev trotzdem laufen, um den Flow zu testen.
+
+Verifikation: `npm run build` + `npm run dev` gegen den Mock — Gate erscheint ohne gespeicherten
+Code, nach Eingabe startet das Funkgerät, ein simuliertes `401` löst das erneute Gate aus.
 
 ## Leitplanken
 

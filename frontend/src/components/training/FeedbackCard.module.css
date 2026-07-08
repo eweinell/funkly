@@ -1,0 +1,22 @@
+.card { padding: 4px 14px 12px; font-size: 13px; background: rgba(0,0,0,.25); border-radius: var(--r-md); }
+.scoreRow { display: flex; align-items: center; gap: 10px; padding: 6px 0; color: var(--text-dim); }
+.scoreRow b { color: var(--lcd-amber); font-family: var(--font-lcd); font-size: 15px; }
+
+.rubric { display: grid; gap: 4px; margin: 6px 0; list-style: none; }
+.rubricItem { display: flex; align-items: baseline; gap: 8px; line-height: 1.4; }
+.verdict { font-family: var(--font-lcd); width: 1.2em; flex-shrink: 0; text-align: center; }
+.verdict.pass { color: var(--ok); }
+.verdict.partial { color: var(--warn); }
+.verdict.fail { color: var(--fail); }
+.verdict.n-a { color: var(--text-dim); }
+
+.details summary { cursor: pointer; color: var(--text-dim); padding: 4px 0; font-size: 12px; }
+.expected { margin-top: 8px; color: var(--text-dim); line-height: 1.5; }
+.expected b { color: var(--ok); }
+
+.coaching {
+  margin-top: 8px; padding: 6px 10px;
+  font-size: 12.5px; color: var(--lcd-amber);
+  background: #1a1a12; border-left: 3px solid var(--lcd-amber-dim);
+  border-radius: var(--r-sm);
+}

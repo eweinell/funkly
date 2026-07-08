@@ -1,0 +1,36 @@
+.pad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  max-width: 260px;
+}
+.key {
+  height: 52px;
+  font-family: var(--font-lcd);
+  font-size: 20px;
+  cursor: pointer;
+  color: var(--text);
+  background: linear-gradient(180deg, #2b333a, #1a2025);
+  border: 1px solid #0c0f12;
+  border-radius: var(--r-md);
+  box-shadow: 0 2px 0 #0a0d0f;
+  touch-action: manipulation;
+}
+.key:active { transform: translateY(1px); box-shadow: 0 1px 0 #0a0d0f; }
+.key.wide { grid-column: span 2; font-size: 13px; letter-spacing: 0.08em; }
+.key.action { color: var(--lcd-amber); }
+.key:disabled { opacity: 0.35; cursor: default; }
+
+.display {
+  font-family: var(--font-lcd);
+  font-size: 22px;
+  letter-spacing: 0.12em;
+  color: var(--lcd-amber);
+  background: var(--lcd-bg);
+  border: 2px solid #0a0c0e;
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  text-align: center;
+  min-height: 1.4em;
+}

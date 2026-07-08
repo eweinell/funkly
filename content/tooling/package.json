@@ -1,0 +1,14 @@
+{
+  "name": "funkly-content-tooling",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Validierungswerkzeug fuer Funkly-Content-Pakete (Szenarien gegen JSON-Schema).",
+  "scripts": {
+    "validate": "node validate.mjs"
+  },
+  "dependencies": {
+    "ajv": "^8.17.1",
+    "js-yaml": "^4.1.0"
+  }
+}

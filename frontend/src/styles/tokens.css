@@ -1,0 +1,54 @@
+/* ==========================================================================
+   FUNKLY — Design-Tokens (UI-SPEZIFIKATION.md §8)
+   Marine-VHF-Hardware-Look: Gehäuse anthrazit, LCD bernstein, PTT signal-orange.
+   V1 bleibt dark-only (keine Light-Variante vorgesehen).
+   ========================================================================== */
+
+:root {
+  /* Gehäuse */
+  --housing: #14181c;
+  --housing-hi: #232a30;
+  --housing-lo: #0a0d10;
+  --bezel: #2d353c;
+
+  /* LCD */
+  --lcd-bg: #1a1206;
+  --lcd-amber: #ffb02e;
+  --lcd-amber-dim: #8a6420;
+  --lcd-green: #7dc95e;
+
+  /* Bedienelemente */
+  --ptt: #e8842c;
+  --ptt-deep: #a85c1a;
+  --distress: #b3231f;
+  --distress-deep: #5f110e;
+  --alarm: #ff4d3d;
+
+  /* Text */
+  --text: #c9d2d8;
+  --text-dim: #78838c;
+  --ok: #7dc95e;
+  --warn: #e8b23a;
+  --fail: #e35b52;
+
+  /* Fonts */
+  --font-label: "Chakra Petch", sans-serif;
+  --font-lcd: "Share Tech Mono", monospace;
+
+  /* Spacing-Stufen */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 26px;
+
+  /* Radius-Stufen */
+  --r-sm: 4px;
+  --r-md: 6px;
+  --r-lg: 14px;
+
+  /* Layout */
+  --bottom-bar-height: 76px;
+  --mobile-breakpoint: 900px;
+}

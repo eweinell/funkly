@@ -1,0 +1,152 @@
+# Funkly Szenario — Kanalwahl & -disziplin (UC-06)
+# Quiz + Praxis: richtiger Kanal je Zweck, DSC-Kanal 70, Dual Watch, Kanaldisziplin.
+schemaVersion: 2
+id: channel-selection
+useCase: UC-06
+module: src
+difficulty: beginner
+languagePolicy: bilingual
+noiseLevel: 0.10
+maxReplays: null
+
+title:
+  en: Channel choice & discipline
+  de: Kanalwahl & -disziplin
+
+briefing:
+  en: >-
+    Show that you pick the right VHF channel for each purpose and keep good
+    channel discipline. Answer the instructor's channel questions (calling and
+    distress, DSC, bridge-to-bridge, ship-to-ship, coast-station working
+    channels), explain dual watch, then demonstrate a clean switch off channel
+    16 to an assigned working channel.
+  de: >-
+    Zeigen Sie, dass Sie fuer jeden Zweck den richtigen UKW-Kanal waehlen und
+    Kanaldisziplin halten. Beantworten Sie die Kanalfragen des Ausbilders (Anruf
+    und Not, DSC, Schiff-Schiff, Bruecke-Bruecke, Arbeitskanaele der
+    Kuestenfunkstelle), erklaeren Sie Dual Watch und zeigen Sie dann einen
+    sauberen Wechsel von Kanal 16 auf einen zugewiesenen Arbeitskanal.
+
+stations:
+  - id: instructor
+    name: Drill Instructor
+    role: >-
+      Radio-procedure instructor combining a short channel quiz with a practical
+      switch. For the practical part, briefly plays a coast station that assigns
+      a working channel. Corrections go through the evaluation, not the reply.
+    voice:
+      provider: polly
+      voiceId: Amy
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR, MOEWE, TARA]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821, DB6390, DE7154]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+  workingChannelPool: [24, 25, 26, 27, 28]
+
+phases:
+  - id: channel-knowledge
+    expect: message
+    label:
+      en: Which channel for what
+      de: Welcher Kanal wofuer
+    station: instructor
+    direction: >-
+      Ask the trainee which channel is used for: calling and distress by voice,
+      DSC calls including DSC distress alerts, ship-to-ship working, and
+      bridge-to-bridge navigation safety. Expect: channel 16 for voice
+      calling/distress, channel 70 for DSC (DSC only, no voice), a ship-to-ship
+      channel such as 6/8/72/77, and channel 13 for bridge-to-bridge. Confirm
+      briefly. Mark complete once the core assignments are answered.
+    hints:
+      en: "16 = voice calling & distress; 70 = DSC only; 72/77 (or 6/8) = ship-to-ship; 13 = bridge-to-bridge."
+      de: "16 = Sprech-Anruf & Not; 70 = nur DSC; 72/77 (oder 6/8) = Schiff-Schiff; 13 = Bruecke-Bruecke."
+    sampleSolution:
+      en: "Channel one-six for voice calling and distress; channel seven-zero for DSC only; channel seven-two for ship-to-ship; channel one-three for bridge-to-bridge."
+      de: "Kanal Eins-Sechs fuer Sprech-Anruf und Not; Kanal Sieben-Zero nur fuer DSC; Kanal Sieben-Zwei fuer Schiff-Schiff; Kanal Eins-Drei fuer Bruecke-Bruecke."
+
+  - id: dsc-and-watch
+    expect: message
+    label:
+      en: DSC alert & dual watch
+      de: DSC-Alarm & Dual Watch
+    station: instructor
+    direction: >-
+      Ask two things: (1) after a DSC distress alert on channel 70, on which
+      channel does the follow-up voice distress traffic take place? (channel 16)
+      and (2) what is dual watch and which channel must always be monitored?
+      (channel 16, alongside a working channel). Mark complete once both are
+      answered correctly.
+    hints:
+      en: "DSC alert on 70, then voice distress traffic on 16. Dual watch = monitor 16 plus one working channel."
+      de: "DSC-Alarm auf 70, dann Sprech-Notverkehr auf 16. Dual Watch = 16 plus ein Arbeitskanal ueberwachen."
+    sampleSolution:
+      en: "After the DSC alert on channel seven-zero, distress traffic by voice is on channel one-six. Dual watch means monitoring channel one-six together with a working channel."
+      de: "Nach dem DSC-Alarm auf Kanal Sieben-Zero laeuft der Sprech-Notverkehr auf Kanal Eins-Sechs. Dual Watch heisst, Kanal Eins-Sechs zusammen mit einem Arbeitskanal zu ueberwachen."
+
+  - id: practical-switch
+    expect: switch-channel
+    label:
+      en: Clean switch off 16
+      de: Sauberer Wechsel von 16
+    station: instructor
+    direction: >-
+      Play a coast station briefly: acknowledge a short call and assign a
+      working channel from the session working-channel value ("change to channel
+      two-six"). The trainee must read back and confirm the switch, keeping
+      channel 16 free of long working traffic. Mark complete once the trainee
+      confirms the switch correctly. Set done.
+    hints:
+      en: "Read back the assigned working channel and confirm the switch; don't hold a conversation on 16."
+      de: "Lies den zugewiesenen Arbeitskanal zurueck und bestaetige den Wechsel; fuehre kein Gespraech auf 16."
+    sampleSolution:
+      en: "Changing to channel two-six, over."
+      de: "Wechsle auf Kanal Zwei-Sechs, over."
+
+rubric:
+  - id: channel-purpose-knowledge
+    weight: 3
+    criterion:
+      en: "Correct channel per purpose: 16 voice calling/distress, 70 DSC only, ship-to-ship (6/8/72/77), 13 bridge-to-bridge."
+      de: "Richtiger Kanal je Zweck: 16 Sprech-Anruf/Not, 70 nur DSC, Schiff-Schiff (6/8/72/77), 13 Bruecke-Bruecke."
+    appliesTo: [channel-knowledge]
+  - id: dsc-channel-and-followup
+    weight: 3
+    criterion:
+      en: "Knows channel 70 is DSC only and that voice distress traffic after a DSC alert moves to channel 16."
+      de: "Weiss, dass Kanal 70 nur DSC ist und der Sprech-Notverkehr nach einem DSC-Alarm auf Kanal 16 laeuft."
+    appliesTo: [dsc-and-watch]
+  - id: dual-watch
+    weight: 2
+    criterion:
+      en: "Explains dual watch: channel 16 is always monitored alongside a working channel."
+      de: "Erklaert Dual Watch: Kanal 16 wird stets neben einem Arbeitskanal ueberwacht."
+    appliesTo: [dsc-and-watch]
+  - id: switch-discipline
+    weight: 2
+    criterion:
+      en: "Reads back the assigned working channel and switches cleanly; keeps 16 free of working traffic."
+      de: "Liest den zugewiesenen Arbeitskanal zurueck und wechselt sauber; haelt 16 frei von Arbeitsverkehr."
+    appliesTo: [practical-switch]
+
+sampleSolution:
+  en: >-
+    Channel one-six for voice calling and distress; channel seven-zero for DSC
+    only; channel seven-two for ship-to-ship; channel one-three for
+    bridge-to-bridge. — After the DSC alert on channel seven-zero, voice
+    distress traffic is on channel one-six; dual watch means monitoring channel
+    one-six together with a working channel. — (Coast: change to channel
+    two-six, over.) — Changing to channel two-six, over.
+  de: >-
+    Kanal Eins-Sechs fuer Sprech-Anruf und Not; Kanal Sieben-Zero nur fuer DSC;
+    Kanal Sieben-Zwei fuer Schiff-Schiff; Kanal Eins-Drei fuer Bruecke-Bruecke.
+    — Nach dem DSC-Alarm auf Kanal Sieben-Zero laeuft der Sprech-Notverkehr auf
+    Kanal Eins-Sechs; Dual Watch heisst, Kanal Eins-Sechs zusammen mit einem
+    Arbeitskanal zu ueberwachen. — (Kuestenfunkstelle: wechseln Sie auf Kanal
+    Zwei-Sechs, over.) — Wechsle auf Kanal Zwei-Sechs, over.
+
+tags: [quiz, channels, dsc, dual-watch, beginner]

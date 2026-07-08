@@ -1,0 +1,183 @@
+# Funkly Szenario — Notmeldung absetzen / MAYDAY (UC-07)
+# Migration aus backend/src/scenarios.ts (M1) auf Content-Schema v2.
+# Notverkehr: immer Englisch (languagePolicy: distress-english).
+schemaVersion: 2
+id: mayday
+useCase: UC-07
+module: src
+difficulty: intermediate
+languagePolicy: distress-english
+noiseLevel: 0.18
+maxReplays: null
+
+title:
+  en: Distress call & message (MAYDAY)
+  de: Notmeldung absetzen (MAYDAY)
+
+briefing:
+  en: >-
+    Fire on board — you have had to abandon the engine room. Transmit a complete
+    distress call and distress message on channel 16. Scheme: MAYDAY x3, THIS IS
+    vessel + callsign + MMSI x3, then MAYDAY + vessel, position, nature of
+    distress, persons on board, assistance required, further information, OVER.
+    Distress traffic is always in English.
+  de: >-
+    Feuer an Bord — der Maschinenraum musste aufgegeben werden. Setzen Sie einen
+    vollstaendigen Notanruf und die Notmeldung auf Kanal 16 ab. Schema: MAYDAY
+    x3, THIS IS Schiff + Rufzeichen + MMSI x3, dann MAYDAY + Schiff, Position,
+    Art der Not, Personen an Bord, erbetene Hilfe, weitere Angaben, OVER.
+    Notverkehr immer auf Englisch.
+
+stations:
+  - id: bremen-rescue
+    name: Bremen Rescue Radio
+    role: >-
+      German MRCC (Bremen Rescue Radio) coordinating maritime distress. Calm,
+      authoritative, textbook SMCP. Acknowledges a sufficiently complete
+      distress message with the MAYDAY-RECEIVED scheme and requests any missing
+      essential element in character.
+    voice:
+      provider: polly
+      voiceId: Brian
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR, MOEWE, TARA]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821, DB6390, DE7154]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+  positionPool:
+    - en: 54 degrees 32 minutes north, 011 degrees 05 minutes east (approx. 5 NM north of Fehmarn)
+      de: 54 Grad 32 Minuten Nord, 011 Grad 05 Minuten Ost (ca. 5 sm noerdlich Fehmarn)
+    - en: 54 degrees 18 minutes north, 012 degrees 05 minutes east (off Warnemuende)
+      de: 54 Grad 18 Minuten Nord, 012 Grad 05 Minuten Ost (vor Warnemuende)
+    - en: 54 degrees 40 minutes north, 010 degrees 12 minutes east (Kiel Fjord approaches)
+      de: 54 Grad 40 Minuten Nord, 010 Grad 12 Minuten Ost (Anlaeufe Kieler Foerde)
+
+phases:
+  - id: distress-call
+    expect: call
+    label:
+      en: Distress call
+      de: Notanruf
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      The trainee transmits the distress call: MAYDAY spoken three times, THIS
+      IS, then own vessel name, callsign and MMSI (name spoken three times).
+      Stay silent as a real MRCC would until the distress message follows, or
+      answer briefly only if the call was clearly directed and complete. Mark
+      complete once MAYDAY x3 and the full identification have been transmitted.
+    hints:
+      en: "Start with MAYDAY three times, THIS IS, then your vessel name three times, callsign and MMSI."
+      de: "Beginne mit MAYDAY dreimal, THIS IS, dann deinen Schiffsnamen dreimal, Rufzeichen und MMSI."
+    sampleSolution:
+      en: "MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird, callsign Delta Kilo Four Five One One, MMSI Two One One Four Two Three Six Five Eight."
+      de: "MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird, callsign Delta Kilo Four Five One One, MMSI Two One One Four Two Three Six Five Eight."
+
+  - id: distress-message
+    expect: message
+    label:
+      en: Distress message
+      de: Notmeldung
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      The trainee transmits the distress message: MAYDAY + vessel name,
+      position, nature of distress (fire, abandoning engine room), persons on
+      board, assistance required, further information, OVER. If an essential
+      element is missing (position, nature of distress, persons on board), stay
+      in character and request it ("say again your position"). Mark complete
+      once the message is sufficiently complete.
+    hints:
+      en: "Give MAYDAY and your vessel, then position, nature of distress, persons on board, assistance required, further info, OVER."
+      de: "Nenne MAYDAY und dein Schiff, dann Position, Art der Not, Personen an Bord, erbetene Hilfe, weitere Angaben, OVER."
+    sampleSolution:
+      en: >-
+        MAYDAY, sailing yacht Bluebird. My position is 54 degrees 32 minutes
+        north, 011 degrees 05 minutes east. Fire on board, engine room
+        abandoned, spreading. Four persons on board. I require immediate
+        assistance. We are preparing the life raft. Over.
+      de: >-
+        MAYDAY, sailing yacht Bluebird. My position is 54 degrees 32 minutes
+        north, 011 degrees 05 minutes east. Fire on board, engine room
+        abandoned, spreading. Four persons on board. I require immediate
+        assistance. We are preparing the life raft. Over.
+
+  - id: acknowledge-close
+    expect: closing
+    label:
+      en: Acknowledge & follow-up
+      de: Quittung & Folge
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      After a sufficiently complete message you acknowledge with the proper
+      scheme ("MAYDAY, sailing yacht Bluebird, THIS IS Bremen Rescue Radio,
+      RECEIVED MAYDAY") and may ask one clarifying question. The trainee should
+      respond to any question and stand by. Mark the exercise complete once the
+      distress message has been acknowledged and the trainee has confirmed
+      standing by. Set done.
+    hints:
+      en: "Answer any clarifying question, confirm details, and stand by for the coordinating station."
+      de: "Beantworte Rueckfragen, bestaetige Angaben und bleibe fuer die leitende Station auf Empfang."
+    sampleSolution:
+      en: "Bremen Rescue Radio, this is Bluebird, roger, standing by on channel one-six, over."
+      de: "Bremen Rescue Radio, this is Bluebird, roger, standing by on channel one-six, over."
+
+rubric:
+  - id: distress-call-structure
+    weight: 3
+    criterion:
+      en: "Distress call: MAYDAY spoken three times, THIS IS, own vessel name, callsign and MMSI (name three times)."
+      de: "Notanruf: MAYDAY dreimal, THIS IS, eigener Schiffsname, Rufzeichen und MMSI (Name dreimal)."
+    appliesTo: [distress-call]
+  - id: distress-message-completeness
+    weight: 3
+    criterion:
+      en: "Distress message contains MAYDAY + vessel, position, nature of distress, persons on board, assistance required, OVER."
+      de: "Notmeldung enthaelt MAYDAY + Schiff, Position, Art der Not, Personen an Bord, erbetene Hilfe, OVER."
+    appliesTo: [distress-message]
+  - id: position-format
+    weight: 2
+    criterion:
+      en: "Position given in a valid format (lat/lon or bearing and distance from a known point), spoken clearly."
+      de: "Position in gueltigem Format (Lat/Lon oder Peilung und Abstand zu einem bekannten Punkt), klar gesprochen."
+  - id: english-throughout
+    weight: 2
+    criterion:
+      en: "English used throughout the distress traffic, regardless of session language."
+      de: "Durchgehend Englisch im gesamten Notverkehr, unabhaengig von der Sessionsprache."
+  - id: prowords-no-invention
+    weight: 2
+    criterion:
+      en: "Correct prowords and ending (OVER when a reply is expected); no invented prowords, no 'over and out'."
+      de: "Korrekte Prowords und Abschluss (OVER, wenn eine Antwort erwartet wird); keine erfundenen Prowords, kein 'over and out'."
+
+sampleSolution:
+  en: >-
+    MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird,
+    callsign Delta Kilo Four Five One One, MMSI Two One One Four Two Three Six
+    Five Eight. — MAYDAY, sailing yacht Bluebird. My position is 54 degrees 32
+    minutes north, 011 degrees 05 minutes east. Fire on board, engine room
+    abandoned and spreading. Four persons on board. I require immediate
+    assistance. We are preparing to abandon to the life raft. Over. — (Bremen
+    Rescue Radio: MAYDAY, Bluebird, THIS IS Bremen Rescue Radio, RECEIVED
+    MAYDAY. How many persons and are you abandoning now? Over.) — Bremen Rescue
+    Radio, this is Bluebird, four persons on board, not abandoning yet, fighting
+    the fire, standing by on channel one-six, over.
+  de: >-
+    MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird,
+    callsign Delta Kilo Four Five One One, MMSI Two One One Four Two Three Six
+    Five Eight. — MAYDAY, sailing yacht Bluebird. My position is 54 degrees 32
+    minutes north, 011 degrees 05 minutes east. Fire on board, engine room
+    abandoned and spreading. Four persons on board. I require immediate
+    assistance. We are preparing to abandon to the life raft. Over. — (Bremen
+    Rescue Radio: MAYDAY, Bluebird, THIS IS Bremen Rescue Radio, RECEIVED
+    MAYDAY.) — Bremen Rescue Radio, this is Bluebird, four persons on board,
+    fighting the fire, standing by on channel one-six, over.
+    (Notverkehr wird immer auf Englisch gefuehrt.)
+
+tags: [distress, mayday, exam-core, english-only]

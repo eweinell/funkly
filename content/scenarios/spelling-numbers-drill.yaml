@@ -1,0 +1,154 @@
+# Funkly Szenario — Buchstabieralphabet & Zahlen-Drill (UC-04)
+# Isoliertes Ueben: Namen/Callsigns buchstabieren, Zahlen/Frequenzen/Uhrzeiten sprechen.
+schemaVersion: 2
+id: spelling-numbers-drill
+useCase: UC-04
+module: src
+difficulty: beginner
+languagePolicy: bilingual
+noiseLevel: 0.08
+maxReplays: null
+
+title:
+  en: Phonetic alphabet & numbers drill
+  de: Buchstabieralphabet & Zahlen-Drill
+
+briefing:
+  en: >-
+    A focused drill. Spell your vessel name and callsign with the ICAO/NATO
+    phonetic alphabet, and speak numbers, a channel and a time the correct radio
+    way — digit by digit, using "decimal" for the decimal point. The instructor
+    prompts one item at a time; you get an immediate correction for each.
+  de: >-
+    Ein gezielter Drill. Buchstabieren Sie Schiffsnamen und Rufzeichen mit dem
+    ICAO/NATO-Buchstabieralphabet und sprechen Sie Zahlen, einen Kanal und eine
+    Uhrzeit korrekt im Funk — ziffernweise, mit "decimal" fuer das Komma. Der
+    Ausbilder gibt jeweils eine Aufgabe vor; Sie erhalten sofort eine Korrektur.
+
+stations:
+  - id: instructor
+    name: Drill Instructor
+    role: >-
+      Radio-procedure instructor running a spelling and numbers drill. Prompts
+      one short task at a time and confirms briefly before the next. Detailed
+      per-word corrections are delivered through the evaluation, not the spoken
+      reply.
+    voice:
+      provider: polly
+      voiceId: Amy
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR, MOEWE, TARA]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821, DB6390, DE7154]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+
+phases:
+  - id: spell-vessel
+    expect: message
+    label:
+      en: Spell the vessel name
+      de: Schiffsnamen buchstabieren
+    station: instructor
+    direction: >-
+      Ask the trainee to spell their vessel name using the phonetic alphabet.
+      Confirm briefly and move on. Mark complete when the trainee has spelled
+      the full vessel name phonetically (e.g. Bravo Lima Uniform Echo Bravo India
+      Romeo Delta for BLUEBIRD).
+    hints:
+      en: "Spell your vessel name letter by letter with the phonetic alphabet: Alfa, Bravo, Charlie ..."
+      de: "Buchstabiere deinen Schiffsnamen Buchstabe fuer Buchstabe mit dem Buchstabieralphabet: Alfa, Bravo, Charlie ..."
+    sampleSolution:
+      en: "Bluebird spelled: Bravo, Lima, Uniform, Echo, Bravo, India, Romeo, Delta."
+      de: "Bluebird buchstabiert: Bravo, Lima, Uniform, Echo, Bravo, India, Romeo, Delta."
+
+  - id: spell-callsign
+    expect: message
+    label:
+      en: Spell the callsign
+      de: Rufzeichen buchstabieren
+    station: instructor
+    direction: >-
+      Ask the trainee to spell their callsign. Letters phonetically, digits
+      spoken individually. Mark complete when the callsign is rendered correctly
+      (e.g. Delta Kilo Four Five One One for DK4511).
+    hints:
+      en: "Spell the letters phonetically and speak each digit on its own: Delta Kilo Four Five One One."
+      de: "Buchstabiere die Buchstaben phonetisch und sprich jede Ziffer einzeln: Delta Kilo Four Five One One."
+    sampleSolution:
+      en: "Callsign Delta Kilo Four Five One One."
+      de: "Rufzeichen Delta Kilo Four Five One One."
+
+  - id: speak-numbers
+    expect: message
+    label:
+      en: Speak numbers, channel & time
+      de: Zahlen, Kanal & Uhrzeit sprechen
+    station: instructor
+    direction: >-
+      Give the trainee a small set to speak the radio way: a channel number, a
+      frequency with a decimal (e.g. 156.800 MHz -> one five six decimal eight
+      zero zero), and a time in UTC (e.g. 0915 -> zero nine one five). Digits are
+      spoken individually; "decimal" marks the decimal point. Mark complete once
+      the trainee has spoken all three items digit by digit.
+    hints:
+      en: "Speak each digit separately; say 'decimal' for the point, and give times as four digits (UTC)."
+      de: "Sprich jede Ziffer einzeln; sage 'decimal' fuer das Komma und Uhrzeiten als vier Ziffern (UTC)."
+    sampleSolution:
+      en: "Channel seven-two. One five six decimal eight zero zero megahertz. Time zero nine one five UTC."
+      de: "Kanal Sieben-Zwei. One five six decimal eight zero zero Megahertz. Zeit zero nine one five UTC."
+
+  - id: readback
+    expect: readback
+    label:
+      en: Read back what you hear
+      de: Gehoertes zuruecklesen
+    station: instructor
+    direction: >-
+      Transmit one callsign and one number group (e.g. "Delta Echo Seven One
+      Five Four, channel one-six") and ask the trainee to read it back exactly.
+      Mark complete once the trainee has read back the callsign and number group
+      correctly, digit by digit and phonetically. Set done.
+    hints:
+      en: "Read back exactly what you heard, letters phonetically and digits one by one."
+      de: "Lies exakt zurueck, was du gehoert hast, Buchstaben phonetisch und Ziffern einzeln."
+    sampleSolution:
+      en: "I read back: Delta Echo Seven One Five Four, channel one-six."
+      de: "Ich lese zurueck: Delta Echo Seven One Five Four, Kanal Eins-Sechs."
+
+rubric:
+  - id: phonetic-alphabet
+    weight: 3
+    criterion:
+      en: "Letters rendered with the correct ICAO/NATO phonetic alphabet (Alfa, Bravo, Charlie ...), no ad-hoc words."
+      de: "Buchstaben mit dem korrekten ICAO/NATO-Buchstabieralphabet (Alfa, Bravo, Charlie ...), keine erfundenen Woerter."
+    appliesTo: [spell-vessel, spell-callsign, readback]
+  - id: digit-by-digit
+    weight: 3
+    criterion:
+      en: "Numbers, channels and times spoken digit by digit (not '156 point 8' or 'seventy-two'), with 'decimal' for the decimal point."
+      de: "Zahlen, Kanaele und Uhrzeiten ziffernweise gesprochen (nicht '156 Komma 8' oder 'zweiundsiebzig'), mit 'decimal' fuer das Komma."
+    appliesTo: [speak-numbers, spell-callsign, readback]
+  - id: readback-accuracy
+    weight: 2
+    criterion:
+      en: "Read-back reproduces the transmitted callsign and number group exactly and completely."
+      de: "Rueckgabe gibt das gesendete Rufzeichen und die Zahlengruppe exakt und vollstaendig wieder."
+    appliesTo: [readback]
+
+sampleSolution:
+  en: >-
+    Vessel: Bravo, Lima, Uniform, Echo, Bravo, India, Romeo, Delta. — Callsign:
+    Delta Kilo Four Five One One. — Channel seven-two; one five six decimal
+    eight zero zero megahertz; time zero nine one five UTC. — Read-back: Delta
+    Echo Seven One Five Four, channel one-six.
+  de: >-
+    Schiff: Bravo, Lima, Uniform, Echo, Bravo, India, Romeo, Delta. — Rufzeichen:
+    Delta Kilo Four Five One One. — Kanal Sieben-Zwei; one five six decimal eight
+    zero zero Megahertz; Zeit zero nine one five UTC. — Rueckgabe: Delta Echo
+    Seven One Five Four, Kanal Eins-Sechs.
+
+tags: [drill, phonetic-alphabet, numbers, beginner]

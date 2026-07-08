@@ -3,7 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "tsc --noEmit"
+    "build:content": "node scripts/build-content.mjs",
+    "build": "npm run build:content && tsc --noEmit",
+    "verify": "node scripts/verify.mjs",
+    "verify:auth": "node scripts/verify-auth.mjs"
   },
   "dependencies": {
     "@anthropic-ai/bedrock-sdk": "^0.24.0",
@@ -13,6 +16,8 @@
   "devDependencies": {
     "@types/aws-lambda": "^8.10.145",
     "@types/node": "^22.0.0",
+    "esbuild": "^0.24.0",
+    "js-yaml": "^4.1.0",
     "typescript": "^5.6.0"
   }
 }

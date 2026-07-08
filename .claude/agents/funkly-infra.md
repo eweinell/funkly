@@ -1,6 +1,6 @@
 ---
 name: funkly-infra
-description: Funkly-Infrastruktur per CDK erweitern — DynamoDB-Fortschrittstabelle, TTS-Cache-Bucket, Budget-Alarm, Cognito-Vorbereitung. Nur CDK-Code, kein Deploy.
+description: Funkly-Infrastruktur per CDK erweitern — DynamoDB-Fortschrittstabelle, TTS-Cache-Bucket, Budget-Alarm, Cognito-Vorbereitung, plus Querschnittspaket Zugangsschutz V1 (Env-Secrets, CloudFront-Origin-Header, API-Throttling). Nur CDK-Code, kein Deploy.
 model: sonnet
 ---
 
@@ -30,6 +30,48 @@ entsteht ausschließlich als CDK-Code** (TypeScript, `infra/`), jede Ressource t
   Adresse hart codieren.
 - **Cognito-Vorbereitung (UC-27)**: nur als auskommentierter/feature-geflaggter Block oder
   separates Construct-Gerüst, das noch nichts provisioniert — V1 bleibt beim einfachen Schutz.
+
+## Paket Zugangsschutz V1 (Querschnitt — Verträge mit `funkly-backend`/`funkly-frontend`)
+
+Kontext: V1 hat **kein Login**. Heute ist die HTTP API ohne Authorizer offen, CORS steht auf
+`*`, und der rohe `ApiEndpoint` ist als Stack-Output direkt (an CloudFront vorbei) erreichbar.
+Dieses Paket zieht eine kostenfreie Hürde ein. Cognito bleibt UC-27/V2 (`lib/auth-prep.ts`) —
+hier nur der einfache Schutz.
+
+### Gemeinsamer Vertrag „Zugangsschutz V1" (identisch in allen drei Briefings, nicht abweichen)
+
+- Zwei Header: `x-funkly-access` (geteilter Zugangscode, kommt vom Frontend, Lambda prüft gegen
+  Env `ACCESS_CODE`) und `x-funkly-origin` (Geheimwert, den **nur CloudFront** der Origin-
+  Anfrage mitgibt, Lambda prüft gegen Env `ORIGIN_SECRET`).
+- Zwei Lambda-Env-Variablen, Werte **nie im Code**: `ACCESS_CODE`, `ORIGIN_SECRET`, gesetzt per
+  CDK-Context `-c accessCode=…` / `-c originSecret=…`.
+- Handler-Prüfreihenfolge (Backend): OPTIONS durchlassen → Origin fehlt/falsch → **403** →
+  Zugangscode fehlt/falsch → **401** → sonst Route. Nicht gesetzte Env-Variable = Prüfung
+  entfällt (Dev), Produktion setzt beide.
+
+### Dein Anteil (nur unter `infra/`, plus README-Konfigtabelle)
+
+- Zwei Lambda-Env-Variablen aus CDK-Context, analog zum Budget-Alarm: **nur setzen, wenn der
+  Context vorhanden ist**; fehlt er, KEINE stille Fehlkonfiguration, sondern
+  `cdk.Annotations.of(this).addWarning(...)`.
+  - `ACCESS_CODE` aus `this.node.tryGetContext("accessCode")`
+  - `ORIGIN_SECRET` aus `this.node.tryGetContext("originSecret")`
+- CloudFront `/api/*`-Behavior: dem `HttpOrigin` den geheimen Header mitgeben, damit nur der Weg
+  über CloudFront funktioniert:
+  `new origins.HttpOrigin(apiDomain, { customHeaders: originSecret ? { "x-funkly-origin": originSecret } : {} })`.
+- CORS `allowHeaders` um `x-funkly-access` erweitern (`content-type` bleibt) — sonst blockt der
+  Preflight des rohen Endpoints den Header.
+- **Throttling als Schadensdeckel** auf der Default-Stage: Rate 5 req/s, Burst 10, per Context
+  (`apiRateLimit`, `apiBurstLimit`) übersteuerbar. Am einfachsten über die L1:
+  `(httpApi.defaultStage!.node.defaultChild as apigwv2.CfnStage).defaultRouteSettings = { throttlingRateLimit, throttlingBurstLimit }`.
+- README-Konfigtabelle: drei Zeilen ergänzen (Zugangscode `accessCode`/Env `ACCESS_CODE`;
+  Origin-Secret `originSecret`/Env `ORIGIN_SECRET`; API-Throttling `apiRateLimit`/`apiBurstLimit`),
+  je mit Hinweis „nie hart codieren, per `-c` beim Deploy setzen".
+- `ApiEndpoint`-Output bleibt bestehen, ist aber ohne `x-funkly-origin` tot — im Bericht vermerken.
+
+Verifikation: `npx cdk synth` fehlerfrei — einmal ohne Context (Warnung zu fehlendem
+`accessCode`/`originSecret`) und einmal mit `-c accessCode=… -c originSecret=…` (keine Warnung);
+`npm run build`.
 
 ## Leitplanken
 

@@ -1,0 +1,38 @@
+.wrap { max-width: 280px; }
+.label {
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.summary {
+  font-family: var(--font-lcd);
+  font-size: 14px;
+  color: var(--lcd-amber);
+  background: var(--lcd-bg);
+  border: 2px solid #0a0c0e;
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  margin-bottom: 12px;
+}
+.hemRow { display: flex; gap: 8px; margin-bottom: 10px; }
+.hemBtn {
+  flex: 1;
+  height: 48px;
+  font-family: var(--font-lcd);
+  font-size: 18px;
+  cursor: pointer;
+  color: var(--text);
+  background: linear-gradient(180deg, #2b333a, #1a2025);
+  border: 1px solid #0c0f12;
+  border-radius: var(--r-md);
+}
+.hemBtn.on { color: var(--lcd-amber); border-color: var(--lcd-amber-dim); background: #1a1a12; }
+.nav { display: flex; justify-content: space-between; margin-top: 10px; }
+.nav button {
+  font-family: var(--font-label); font-size: 11px; font-weight: 600; letter-spacing: 0.1em;
+  padding: 8px 14px; cursor: pointer;
+  color: var(--text-dim); background: var(--housing); border: 1px solid var(--bezel);
+  border-radius: var(--r-sm);
+}

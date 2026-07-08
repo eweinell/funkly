@@ -10,9 +10,36 @@ function getCtx(): AudioContext {
   return ctx;
 }
 
+/** iOS/Autoplay-Regel (§6): nach der ersten Nutzergeste aufrufen. */
+export async function unlockRadioContext(): Promise<void> {
+  const ac = getCtx();
+  if (ac.state === "suspended") await ac.resume();
+}
+
 export interface RadioFxOptions {
   volume?: number; // 0..1
   noise?: number; // 0..1 Grundrauschen
+}
+
+/** Aktuell laufende Wiedergabe (fuer Barge-in: PTT stoppt die Gegenstelle sofort, §7). */
+let current: { src: AudioBufferSourceNode; noiseSrc: AudioBufferSourceNode; resolve: () => void } | undefined;
+
+/** Bricht eine laufende playRadio()-Wiedergabe sofort ab (Barge-in). No-op, falls nichts spielt. */
+export function stopPlayback(): void {
+  if (!current) return;
+  const { src, noiseSrc, resolve } = current;
+  current = undefined;
+  try {
+    src.stop();
+  } catch {
+    /* schon beendet */
+  }
+  try {
+    noiseSrc.stop();
+  } catch {
+    /* schon beendet */
+  }
+  resolve();
 }
 
 export async function playRadio(audioBase64: string, opts: RadioFxOptions = {}): Promise<void> {
@@ -39,7 +66,9 @@ export async function playRadio(audioBase64: string, opts: RadioFxOptions = {}):
 
   // leichte Kompression/Saettigung wie ein uebersteuerter Funklautsprecher
   const shaper = ac.createWaveShaper();
-  shaper.curve = makeSaturationCurve(2.5);
+  // Cast: TS-DOM-Lib-Typen fuer WaveShaperNode.curve sind auf Float32Array<ArrayBuffer>
+  // verengt; makeSaturationCurve liefert strukturell identisches Float32Array.
+  shaper.curve = makeSaturationCurve(2.5) as Float32Array<ArrayBuffer>;
 
   const gain = ac.createGain();
   gain.gain.value = volume;
@@ -61,7 +90,12 @@ export async function playRadio(audioBase64: string, opts: RadioFxOptions = {}):
   noiseSrc.connect(noiseGain).connect(ac.destination);
 
   return new Promise<void>((resolve) => {
-    noiseSrc.onended = () => resolve();
+    const done = () => {
+      if (current?.src === src) current = undefined;
+      resolve();
+    };
+    noiseSrc.onended = done;
+    current = { src, noiseSrc, resolve: done };
     src.start();
     noiseSrc.start();
     noiseSrc.stop(t0 + buffer.duration + tailSeconds);
@@ -84,4 +118,43 @@ function makeSaturationCurve(amount: number): Float32Array {
     curve[i] = Math.tanh(amount * x) / Math.tanh(amount);
   }
   return curve;
+}
+
+/**
+ * VOL/SQL-Reglerwerte (§7), persistiert. SQL ist invertiert als
+ * Trainings-Schwierigkeit zu lesen: hoeher = mehr Grundrauschen (radioFx-Parameter).
+ */
+const STORAGE_KEY = "funkly.audioSettings.v1";
+
+export interface AudioSettings {
+  volume: number; // 0..1
+  squelch: number; // 0..1 (Schwierigkeit: mehr = mehr Rauschen)
+}
+
+const DEFAULT_SETTINGS: AudioSettings = { volume: 0.85, squelch: 0.3 };
+
+export function loadAudioSettings(): AudioSettings {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return { ...DEFAULT_SETTINGS };
+    const parsed = JSON.parse(raw);
+    return {
+      volume: clamp01(Number(parsed.volume ?? DEFAULT_SETTINGS.volume)),
+      squelch: clamp01(Number(parsed.squelch ?? DEFAULT_SETTINGS.squelch)),
+    };
+  } catch {
+    return { ...DEFAULT_SETTINGS };
+  }
+}
+
+export function saveAudioSettings(settings: AudioSettings): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+  } catch {
+    /* Storage nicht verfuegbar (z. B. privater Modus) - Werte gelten nur fuer die Session */
+  }
+}
+
+function clamp01(n: number): number {
+  return Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.5;
 }

@@ -1,0 +1,176 @@
+# Funkly Szenario — Funkstille gebieten/aufheben (SEELONCE) (UC-12)
+# SEELONCE MAYDAY / SEELONCE FEENEE, Verhalten als Dritter. Notverkehr immer Englisch.
+schemaVersion: 2
+id: seelonce
+useCase: UC-12
+module: src
+difficulty: advanced
+languagePolicy: distress-english
+noiseLevel: 0.18
+maxReplays: null
+
+title:
+  en: Imposing & lifting radio silence (SEELONCE)
+  de: Funkstille gebieten & aufheben (SEELONCE)
+
+briefing:
+  en: >-
+    Your vessel sent a MAYDAY (fire on board) and Bremen Rescue Radio is
+    coordinating; you are controlling the distress traffic on channel 16. A
+    careless station starts a routine call and interferes. Impose radio silence
+    with SEELONCE MAYDAY. Later, once the fire is out and the situation is
+    resolved, cancel distress traffic with SEELONCE FEENEE (with time and vessel
+    name). Note: a station that is only a bystander, not controlling the traffic,
+    would impose silence with SEELONCE DISTRESS and otherwise keep silent and
+    listen. Distress traffic is in English.
+  de: >-
+    Ihr Schiff hat einen MAYDAY abgesetzt (Feuer an Bord), Bremen Rescue Radio
+    koordiniert; Sie leiten den Notverkehr auf Kanal 16. Eine unachtsame Station
+    beginnt einen Routineanruf und stoert. Gebieten Sie Funkstille mit SEELONCE
+    MAYDAY. Spaeter, wenn das Feuer geloescht und die Lage bereinigt ist, heben
+    Sie den Notverkehr mit SEELONCE FEENEE auf (mit Uhrzeit und Schiffsname).
+    Hinweis: Eine Station, die nur Dritter ist und den Verkehr nicht leitet,
+    wuerde Funkstille mit SEELONCE DISTRESS gebieten und ansonsten Funkstille
+    halten und mithoeren. Notverkehr auf Englisch.
+
+stations:
+  - id: bremen-rescue
+    name: Bremen Rescue Radio
+    role: >-
+      German MRCC (Bremen Rescue Radio) coordinating the distress. Confirms the
+      trainee's control of distress traffic, acknowledges SEELONCE FEENEE, and
+      stays calm and authoritative in textbook SMCP.
+    voice:
+      provider: polly
+      voiceId: Brian
+      engine: neural
+      language: en-GB
+  - id: interfering-vessel
+    name: Motor Vessel Delphin
+    role: >-
+      A station (MV Delphin) that unwittingly starts a routine call on channel
+      16 while distress traffic is in progress. When silence is imposed, it
+      apologises briefly and ceases transmitting.
+    voice:
+      provider: polly
+      voiceId: Emma
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR, MOEWE, TARA]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821, DB6390, DE7154]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+  positionPool:
+    - en: 54 degrees 32 minutes north, 011 degrees 05 minutes east (approx. 5 NM north of Fehmarn)
+      de: 54 Grad 32 Minuten Nord, 011 Grad 05 Minuten Ost (ca. 5 sm noerdlich Fehmarn)
+
+phases:
+  - id: impose-silence
+    expect: message
+    label:
+      en: Impose SEELONCE MAYDAY
+      de: SEELONCE MAYDAY gebieten
+    station: interfering-vessel
+    expectedChannel: 16
+    direction: >-
+      Play MV Delphin starting a routine call on channel 16, interfering with the
+      distress traffic. The trainee, controlling the distress traffic, must
+      impose radio silence: MAYDAY, ALL STATIONS (three times), THIS IS own
+      vessel, SEELONCE MAYDAY. React as Delphin by apologising briefly and
+      ceasing to transmit. Mark complete once the trainee has correctly imposed
+      SEELONCE MAYDAY.
+    hints:
+      en: "Impose silence: MAYDAY, ALL STATIONS three times, THIS IS your vessel, SEELONCE MAYDAY."
+      de: "Gebiete Funkstille: MAYDAY, ALL STATIONS dreimal, THIS IS dein Schiff, SEELONCE MAYDAY."
+    sampleSolution:
+      en: "MAYDAY. All stations, all stations, all stations, THIS IS sailing yacht Bluebird. SEELONCE MAYDAY."
+      de: "MAYDAY. All stations, all stations, all stations, THIS IS sailing yacht Bluebird. SEELONCE MAYDAY."
+
+  - id: restrict-prudonce
+    expect: message
+    label:
+      en: Relax to PRUDONCE
+      de: Auf PRUDONCE lockern
+    station: bremen-rescue
+    expectedChannel: 16
+    optional: true
+    direction: >-
+      Optional, advanced step. Once the immediate danger has eased but distress
+      traffic is not yet finished, the station controlling the traffic may allow
+      restricted working with PRUDONCE: MAYDAY, ALL STATIONS (three times), THIS
+      IS own vessel, time in UTC, PRUDONCE. Acknowledge as Bremen Rescue. Mark
+      complete once the trainee transmits a correctly formed PRUDONCE, or skip
+      this phase.
+    hints:
+      en: "Allow restricted working: MAYDAY, ALL STATIONS three times, THIS IS your vessel, time UTC, PRUDONCE."
+      de: "Eingeschraenkten Verkehr zulassen: MAYDAY, ALL STATIONS dreimal, THIS IS dein Schiff, Uhrzeit UTC, PRUDONCE."
+    sampleSolution:
+      en: "MAYDAY. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, time one four three zero UTC, PRUDONCE."
+      de: "MAYDAY. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, time one four three zero UTC, PRUDONCE."
+
+  - id: lift-silence
+    expect: message
+    label:
+      en: Cancel with SEELONCE FEENEE
+      de: Mit SEELONCE FEENEE aufheben
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      The fire is out and the situation is resolved. The trainee cancels distress
+      traffic and lifts radio silence: MAYDAY, ALL STATIONS (three times), THIS
+      IS own vessel, time in UTC, own vessel name, SEELONCE FEENEE. Acknowledge
+      as Bremen Rescue. Mark the exercise complete once SEELONCE FEENEE has been
+      correctly transmitted. Set done.
+    hints:
+      en: "Lift silence: MAYDAY, ALL STATIONS three times, THIS IS your vessel, time UTC, vessel name, SEELONCE FEENEE."
+      de: "Funkstille aufheben: MAYDAY, ALL STATIONS dreimal, THIS IS dein Schiff, Uhrzeit UTC, Schiffsname, SEELONCE FEENEE."
+    sampleSolution:
+      en: "MAYDAY. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, time one five one zero UTC, sailing yacht Bluebird, SEELONCE FEENEE."
+      de: "MAYDAY. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, time one five one zero UTC, sailing yacht Bluebird, SEELONCE FEENEE."
+
+rubric:
+  - id: seelonce-mayday-impose
+    weight: 3
+    criterion:
+      en: "Imposes radio silence with the correct SEELONCE MAYDAY form: MAYDAY, ALL STATIONS three times, THIS IS own vessel, SEELONCE MAYDAY."
+      de: "Gebietet Funkstille mit korrekter SEELONCE-MAYDAY-Form: MAYDAY, ALL STATIONS dreimal, THIS IS eigenes Schiff, SEELONCE MAYDAY."
+    appliesTo: [impose-silence]
+  - id: seelonce-feenee-lift
+    weight: 3
+    criterion:
+      en: "Cancels distress traffic with SEELONCE FEENEE, including time (UTC) and the vessel name."
+      de: "Hebt den Notverkehr mit SEELONCE FEENEE auf, mit Uhrzeit (UTC) und dem Schiffsnamen."
+    appliesTo: [lift-silence]
+  - id: third-party-awareness
+    weight: 2
+    criterion:
+      en: "Distinguishes the controlling station's SEELONCE MAYDAY from a bystander's SEELONCE DISTRESS; a third party otherwise keeps silence and listens."
+      de: "Unterscheidet das SEELONCE MAYDAY der leitenden Station vom SEELONCE DISTRESS eines Dritten; ein Dritter haelt sonst Funkstille und hoert mit."
+  - id: english-throughout
+    weight: 2
+    criterion:
+      en: "English used throughout the distress traffic, regardless of session language; SEELONCE terms pronounced clearly."
+      de: "Durchgehend Englisch im gesamten Notverkehr, unabhaengig von der Sessionsprache; SEELONCE-Begriffe klar gesprochen."
+
+sampleSolution:
+  en: >-
+    (MV Delphin starts a routine call on 16.) — MAYDAY. All stations, all
+    stations, all stations, THIS IS sailing yacht Bluebird. SEELONCE MAYDAY. —
+    (optional, later) MAYDAY. All stations, all stations, all stations, THIS IS
+    sailing yacht Bluebird, time one four three zero UTC, PRUDONCE. — (situation
+    resolved) MAYDAY. All stations, all stations, all stations, THIS IS sailing
+    yacht Bluebird, time one five one zero UTC, sailing yacht Bluebird, SEELONCE
+    FEENEE.
+  de: >-
+    (MV Delphin beginnt einen Routineanruf auf 16.) — MAYDAY. All stations, all
+    stations, all stations, THIS IS sailing yacht Bluebird. SEELONCE MAYDAY. —
+    (optional, spaeter) MAYDAY. All stations, all stations, all stations, THIS IS
+    sailing yacht Bluebird, time one four three zero UTC, PRUDONCE. — (Lage
+    bereinigt) MAYDAY. All stations, all stations, all stations, THIS IS sailing
+    yacht Bluebird, time one five one zero UTC, sailing yacht Bluebird, SEELONCE
+    FEENEE. (Notverkehr immer auf Englisch.)
+
+tags: [distress, seelonce, radio-silence, english-only, advanced]

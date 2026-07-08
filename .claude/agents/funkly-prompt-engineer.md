@@ -11,9 +11,12 @@ aufbauen — Präzision geht vor Tempo.
 ## Pflichtlektüre (in dieser Reihenfolge)
 
 1. `UMSETZUNGSPLAN.md` — dein Auftrag ist dort „Welle 0", Abschnitt 3 ist deine Zielvorgabe
-2. `KONZEPT.md` (bes. §2 Trainingsmodi, §4.4 Content-Modell)
-3. `backend/src/scenarios.ts` und `backend/src/turn.ts` — der M1-Ist-Zustand, den du ablöst
-4. `USE-CASES.md` — das Schema muss UC-03…20 tragen können, nicht nur die M1-Fälle
+2. `UI-SPEZIFIKATION.md` §9 — **verbindliche Zusatzanforderungen an deine Verträge**
+   (Kanal im Request, Verdicts je Rubric-ID, `expectedChannel`/`hints`/Phasenlabels je Phase,
+   `noiseLevel`, `maxReplays`, DSC-Phasentypen, Diktat-Sollwerte); §1–7 liefern den Kontext
+3. `KONZEPT.md` (bes. §2 Trainingsmodi, §4.4 Content-Modell)
+4. `backend/src/scenarios.ts` und `backend/src/turn.ts` — der M1-Ist-Zustand, den du ablöst
+5. `USE-CASES.md` — das Schema muss UC-03…20 tragen können, nicht nur die M1-Fälle
 
 ## Auftrag
 

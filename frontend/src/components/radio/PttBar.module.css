@@ -1,0 +1,31 @@
+.ptt {
+  display: block; margin: 26px auto 8px;
+  width: 128px; height: 128px; border-radius: 50%;
+  cursor: pointer; touch-action: none; user-select: none;
+  font-family: var(--font-label); font-size: 22px; font-weight: 700; letter-spacing: 0.2em;
+  color: #3a1f04; text-shadow: 0 1px 0 rgba(255,255,255,.25);
+  background: radial-gradient(circle at 38% 32%, #ffb066, var(--ptt) 55%, var(--ptt-deep) 100%);
+  border: 6px solid #101418;
+  box-shadow:
+    0 6px 0 #0a0d0f,
+    0 14px 24px rgba(0, 0, 0, 0.5),
+    inset 0 2px 6px rgba(255, 255, 255, 0.35);
+  transition: transform 60ms ease, box-shadow 60ms ease;
+}
+.ptt.active {
+  transform: translateY(5px);
+  box-shadow: 0 1px 0 #0a0d0f, 0 6px 12px rgba(0,0,0,.5), inset 0 3px 10px rgba(0, 0, 0, 0.35);
+  background: radial-gradient(circle at 50% 60%, #ff9c3f, var(--ptt-deep) 80%);
+}
+.ptt:disabled { filter: grayscale(0.7) brightness(0.6); cursor: default; }
+.hint { text-align: center; font-size: 11px; letter-spacing: 0.14em; color: var(--text-dim); }
+
+/* Mobile: fixe Bottom-Bar ueber die volle Breite (UI-SPEZIFIKATION §6) */
+@media (max-width: 900px) {
+  .hint { display: none; }
+  .ptt {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    margin: 0; width: 100%; height: var(--bottom-bar-height);
+    border-radius: 0; border-width: 0; border-top: 3px solid #101418;
+  }
+}

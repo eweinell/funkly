@@ -1,0 +1,366 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://funkly.local/schema/scenario.schema.json",
+  "title": "Funkly Scenario (Content-Schema v2)",
+  "description": "Ein Trainingsszenario als Content-Paket. Szenarien sind Daten, nicht Code (KONZEPT.md §4.4). Dieses Schema ist ein API-Vertrag (UMSETZUNGSPLAN.md §3, UI-SPEZIFIKATION.md §9) und wird nur nach Absprache mit der Hauptsession geaendert.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "id", "useCase", "module", "difficulty", "title", "briefing", "stations", "phases", "rubric"],
+  "properties": {
+    "schemaVersion": {
+      "description": "Vertragsversion dieses Schemas. Erlaubt spaetere, abwaertskompatible Migrationen.",
+      "const": 2
+    },
+    "id": {
+      "description": "Stabile Szenario-ID (kebab-case), zugleich Dateiname ohne .yaml.",
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+    },
+    "useCase": {
+      "description": "Zugehoeriger Use Case aus USE-CASES.md, z. B. UC-01.",
+      "type": "string",
+      "pattern": "^UC-[0-9]{2}$"
+    },
+    "module": {
+      "description": "Fachmodul. V1 = Seefunk SRC. Weitere Module (ubi, bzf ...) spaeter.",
+      "type": "string",
+      "enum": ["src", "ubi", "bzf"]
+    },
+    "difficulty": {
+      "description": "Schwierigkeitsgrad. Steuert u. a. Default-Rauschen und Sprechtempo der Gegenstelle.",
+      "type": "string",
+      "enum": ["beginner", "intermediate", "advanced"]
+    },
+    "languagePolicy": {
+      "description": "Sprachregime. 'bilingual' = Routine in Sessionsprache, aber Notverkehr immer EN. 'distress-english' erzwingt EN fuer den gesamten Verkehr (Notverkehr-Szenarien). 'session' = strikt Sessionsprache.",
+      "type": "string",
+      "enum": ["bilingual", "distress-english", "session"],
+      "default": "bilingual"
+    },
+    "noiseLevel": {
+      "description": "Mindest-Rauschpegel dieses Szenarios (0 = klar, 1 = stark verrauscht). Szenariospezifisch, nicht global (UI-SPEZIFIKATION §4/§7). Hoerverstaendnis-Szenarien erzwingen darueber ein Mindestrauschen.",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1,
+      "default": 0.15
+    },
+    "maxReplays": {
+      "description": "Maximale Wiedergaben eines Empfangsspruchs (Diktat/Hoeren, UI-SPEZIFIKATION §4). null = unbegrenzt (Default). Die Pruefungssimulation kann spaeter begrenzen, ohne UI-Umbau.",
+      "type": ["integer", "null"],
+      "minimum": 1,
+      "default": null
+    },
+    "title": { "$ref": "#/$defs/localizedText" },
+    "briefing": { "$ref": "#/$defs/localizedText" },
+    "stations": {
+      "description": "Gegenstelle(n), die das Modell spielt. Mehrere Stationen ermoeglichen Handoffs (z. B. Kuestenfunkstelle -> Rescue) mit eigener TTS-Stimme je Station.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/station" }
+    },
+    "setup": { "$ref": "#/$defs/setup" },
+    "phases": {
+      "description": "Ablauf des Szenarios als geordnete Phasen mit Phasen-Tracking und Sollkanal. Reihenfolge = Erwartungsreihenfolge (Stepper, UI-SPEZIFIKATION §3).",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/phase" }
+    },
+    "rubric": {
+      "description": "Bewertungskriterien mit stabilen IDs und Gewichten. IDs sind API-Vertrag (kebab-case), Verdicts je ID gehen an das Feedback-Panel und die Fortschrittsspeicherung.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/rubricCriterion" }
+    },
+    "sampleSolution": {
+      "description": "Muster-Funkverkehr (zweisprachig) als Referenz fuer Feedback und Prompt. Optional zusaetzlich je Phase in phase.sampleSolution.",
+      "$ref": "#/$defs/localizedText"
+    },
+    "dictation": {
+      "description": "Nur fuer Diktat-/Hoerverstaendnis-Szenarien (UC-09/20): das nach Gehoer auszufuellende Formular mit Sollwerten und Toleranzen je Feld.",
+      "$ref": "#/$defs/dictation"
+    },
+    "tags": {
+      "description": "Freie Schlagworte zur Filterung/Gruppierung im UI (z. B. 'distress', 'dsc').",
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  },
+  "allOf": [
+    {
+      "$comment": "Diktat-/Hoer-Szenarien muessen einen dictation-Block mitbringen.",
+      "if": {
+        "properties": { "phases": { "contains": { "properties": { "expect": { "enum": ["dictation", "listening"] } } } } }
+      },
+      "then": { "required": ["dictation"] }
+    }
+  ],
+  "$defs": {
+    "localizedText": {
+      "description": "Zweisprachiger Text (Pflicht: en und de).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["en", "de"],
+      "properties": {
+        "en": { "type": "string", "minLength": 1 },
+        "de": { "type": "string", "minLength": 1 }
+      }
+    },
+    "station": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "role", "voice"],
+      "properties": {
+        "id": {
+          "description": "Stabile Stations-ID (kebab-case), referenziert aus phase.station.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "name": {
+          "description": "Rufname der Station im Funkverkehr, z. B. 'Lyngby Radio'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "role": {
+          "description": "Rolle/Charakter der Station fuer das Dialog-Modell (englisch formuliert), z. B. 'coast station', 'MRCC', 'other vessel'.",
+          "type": "string",
+          "minLength": 1
+        },
+        "voice": { "$ref": "#/$defs/voice" }
+      }
+    },
+    "voice": {
+      "description": "TTS-Stimme dieser Station. Provider-neutral; V1 nutzt Amazon Polly Neural.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["voiceId", "language"],
+      "properties": {
+        "provider": { "type": "string", "enum": ["polly"], "default": "polly" },
+        "voiceId": { "type": "string", "minLength": 1, "description": "z. B. 'Amy' (en-GB) oder 'Vicki' (de-DE)." },
+        "engine": { "type": "string", "enum": ["neural", "standard", "generative"], "default": "neural" },
+        "language": {
+          "description": "Sprach-Locale der Stimme. Notverkehr bleibt EN, unabhaengig von der Sessionsprache.",
+          "type": "string",
+          "enum": ["en-GB", "en-US", "de-DE"]
+        }
+      }
+    },
+    "setup": {
+      "description": "Zufallspools fuer Stammdaten je Session (KONZEPT §4.4: setup). Werte werden pro Session gezogen und in den Prompt eingesetzt.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "vesselPool": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "callsignPool": { "type": "array", "items": { "type": "string" }, "minItems": 1 },
+        "mmsi": {
+          "description": "MMSI-Erzeugung: fixer MID-Praefix + zufaellige Restziffern (Gesamtlaenge 9).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["midPrefix"],
+          "properties": {
+            "midPrefix": { "type": "string", "pattern": "^[0-9]{3}$", "description": "Maritime Identification Digits, z. B. '211' fuer Deutschland." },
+            "randomDigits": { "type": "integer", "minimum": 1, "maximum": 6, "default": 6 }
+          }
+        },
+        "positionPool": {
+          "description": "Vorgefertigte Positionsbeschreibungen (fachlich korrekt, zweisprachig), aus denen eine gezogen wird.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/localizedText" }
+        },
+        "workingChannelPool": {
+          "description": "Kandidaten fuer den zugewiesenen Arbeitskanal (z. B. [26, 27]).",
+          "type": "array",
+          "items": { "$ref": "#/$defs/channel" },
+          "minItems": 1
+        }
+      }
+    },
+    "channel": {
+      "description": "UKW-Kanal als Zahl oder Sonderbezeichner. '16' Anruf/Not, '70' nur DSC.",
+      "oneOf": [
+        { "type": "integer", "minimum": 1, "maximum": 88 },
+        { "type": "string", "pattern": "^(16|70|[0-9]{1,2}A?)$" }
+      ]
+    },
+    "phase": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "expect", "label"],
+      "properties": {
+        "id": {
+          "description": "Stabile Phasen-ID (kebab-case). Erscheint in TurnResponse.phase und im Stepper.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "expect": {
+          "description": "Phasentyp. Bestimmt, welche Nutzeraktion erwartet wird und welche Bewertungslogik greift.",
+          "type": "string",
+          "enum": [
+            "call",
+            "switch-channel",
+            "message",
+            "readback",
+            "closing",
+            "dsc-alert",
+            "dsc-ack",
+            "dsc-individual",
+            "dsc-cancel",
+            "dictation",
+            "listening",
+            "translation",
+            "free"
+          ]
+        },
+        "label": {
+          "description": "Phasenlabel fuer den Stepper (DE/EN), UI-SPEZIFIKATION §3.",
+          "$ref": "#/$defs/localizedText"
+        },
+        "station": {
+          "description": "ID der in dieser Phase aktiven Gegenstelle (Verweis auf stations[].id). Default: erste Station.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "direction": {
+          "description": "Regie-Anweisung an das Dialog-Modell fuer diese Phase (englisch formuliert): was die Station tut/antwortet.",
+          "type": "string"
+        },
+        "expectedChannel": {
+          "description": "Sollkanal dieser Phase (UI-SPEZIFIKATION §1). Auf falschem Kanal antwortet die Gegenstelle nicht. Weglassen = kein Kanalzwang in dieser Phase.",
+          "$ref": "#/$defs/channel"
+        },
+        "hints": {
+          "description": "Coaching-Zeile 'Als Naechstes: ...' fuer den Trainingsmodus (UI-SPEZIFIKATION §3), zweisprachig.",
+          "$ref": "#/$defs/localizedText"
+        },
+        "sampleSolution": {
+          "description": "Optionaler Musterspruch speziell fuer diese Phase (zweisprachig).",
+          "$ref": "#/$defs/localizedText"
+        },
+        "optional": {
+          "description": "true = Phase darf uebersprungen werden, ohne das Szenario zu blockieren.",
+          "type": "boolean",
+          "default": false
+        }
+      }
+    },
+    "rubricCriterion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "weight", "criterion"],
+      "properties": {
+        "id": {
+          "description": "Stabile Rubric-ID (kebab-case). API-Vertrag: Verdicts/Scores werden je ID zurueckgegeben und persistiert.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "weight": {
+          "description": "Relatives Gewicht fuer den Gesamtscore. Muss > 0 sein; Summe wird beim Aggregieren normalisiert.",
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "criterion": {
+          "description": "Kriterienbeschreibung fuer Bewertungsmodell und Anzeige (zweisprachig).",
+          "$ref": "#/$defs/localizedText"
+        },
+        "appliesTo": {
+          "description": "Optionale Einschraenkung auf bestimmte Phasen (Liste von phase.id). Fehlt = gilt fuer das gesamte Szenario.",
+          "type": "array",
+          "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+          "minItems": 1
+        }
+      }
+    },
+    "dictation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["messageAudioText", "fields"],
+      "properties": {
+        "messageAudioText": {
+          "description": "Der vorzulesende (und zu verrauschende) Funkspruch, den der Nutzer nach Gehoer aufnimmt. Notverkehr in EN.",
+          "$ref": "#/$defs/localizedText"
+        },
+        "fields": {
+          "description": "Formularfelder des Notmeldeschemas mit Sollwert und Toleranz je Feld (UI-SPEZIFIKATION §4).",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/dictationField" }
+        }
+      }
+    },
+    "dictationField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "label", "expected"],
+      "properties": {
+        "id": {
+          "description": "Stabile Feld-ID (kebab-case), z. B. 'mmsi', 'position', 'nature-of-distress'.",
+          "type": "string",
+          "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$"
+        },
+        "type": {
+          "description": "Feldtyp. Bestimmt Eingabe-Teilstruktur (UI) und Auswertungsart (exakt vs. tolerant).",
+          "type": "string",
+          "enum": ["text", "mmsi", "position", "number", "enum"]
+        },
+        "label": { "$ref": "#/$defs/localizedText" },
+        "expected": {
+          "description": "Sollwert. Fuer text/enum String; fuer mmsi 9-stellige Ziffernfolge; fuer number eine Zahl; fuer position ein strukturiertes Objekt.",
+          "oneOf": [
+            { "type": "string" },
+            { "type": "number" },
+            { "$ref": "#/$defs/positionValue" }
+          ]
+        },
+        "evalMode": {
+          "description": "'exact' fuer strukturierte Felder (MMSI, Zahl), 'tolerant' fuer Freitext (ueber EVAL_MODEL_ID bewertet). Default nach Typ.",
+          "type": "string",
+          "enum": ["exact", "tolerant"]
+        },
+        "tolerance": { "$ref": "#/$defs/tolerance" },
+        "options": {
+          "description": "Nur type=enum: erlaubte Auswahlwerte (zweisprachig beschriftet).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["value", "label"],
+            "properties": {
+              "value": { "type": "string" },
+              "label": { "$ref": "#/$defs/localizedText" }
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "$comment": "enum-Felder brauchen options.",
+          "if": { "properties": { "type": { "const": "enum" } } },
+          "then": { "required": ["options"] }
+        }
+      ]
+    },
+    "positionValue": {
+      "description": "Strukturierte Position (Grad/Minuten/Dezimalminuten + Hemisphaeren), passend zur PositionInput-Teilstruktur (UI-SPEZIFIKATION §2/§4).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["latDeg", "latMin", "latHem", "lonDeg", "lonMin", "lonHem"],
+      "properties": {
+        "latDeg": { "type": "integer", "minimum": 0, "maximum": 90 },
+        "latMin": { "type": "number", "minimum": 0, "exclusiveMaximum": 60 },
+        "latHem": { "type": "string", "enum": ["N", "S"] },
+        "lonDeg": { "type": "integer", "minimum": 0, "maximum": 180 },
+        "lonMin": { "type": "number", "minimum": 0, "exclusiveMaximum": 60 },
+        "lonHem": { "type": "string", "enum": ["E", "W"] }
+      }
+    },
+    "tolerance": {
+      "description": "Toleranzfenster fuer die Feldauswertung. Fuer position typ. { minutes: 0.5 } = +/-0,5' (UI-SPEZIFIKATION §4).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "minutes": { "type": "number", "minimum": 0, "description": "Positionstoleranz in Bogenminuten (+/-)." },
+        "absolute": { "type": "number", "minimum": 0, "description": "Absolute Zahlentoleranz fuer type=number (+/-)." }
+      }
+    }
+  }
+}

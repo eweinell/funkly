@@ -1,0 +1,18 @@
+.log { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.entry { border-radius: var(--r-md); overflow: hidden; }
+.entryText { display: flex; gap: 10px; padding: 10px 14px; font-size: 14px; line-height: 1.5; }
+.who {
+  flex-shrink: 0; font-family: var(--font-lcd); font-size: 11px;
+  padding-top: 2px; letter-spacing: 0.08em;
+}
+.entry.user { background: #16202a; border-left: 3px solid #4a7ba6; }
+.entry.user .who { color: #6fa8d6; }
+.entry.station { background: #131c14; border-left: 3px solid #4d7a42; }
+.entry.station .who { color: var(--ok); }
+.entry.system { background: #1c1a12; border-left: 3px solid var(--lcd-amber-dim); padding: 8px 14px; font-size: 13px; color: var(--text-dim); }
+.systemCoaching { margin-top: 4px; color: var(--lcd-amber); font-size: 12.5px; }
+
+.doneBanner {
+  text-align: center; font-family: var(--font-lcd);
+  color: var(--ok) !important; letter-spacing: 0.2em;
+}

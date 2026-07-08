@@ -1,0 +1,11 @@
+.stepper { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 4px; }
+.step {
+  display: flex; align-items: center; gap: 6px;
+  font-size: 11px; letter-spacing: 0.04em; color: var(--text-dim);
+  padding: 4px 9px; border-radius: 999px; border: 1px solid var(--bezel);
+  background: var(--housing);
+}
+.step.current { color: var(--lcd-amber); border-color: var(--lcd-amber-dim); background: #1a1a12; }
+.step.done { color: var(--ok); border-color: #2c4a22; }
+.dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.arrow { color: var(--text-dim); font-size: 11px; }

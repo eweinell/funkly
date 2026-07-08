@@ -1,0 +1,8 @@
+.banner {
+  padding: 14px 16px;
+  border-radius: var(--r-md);
+  color: var(--text);
+  background: #241a12; border: 1px solid #5a3d1f;
+}
+.title { font-weight: 700; color: var(--warn); margin-bottom: 6px; }
+.body { font-size: 13px; line-height: 1.5; color: var(--text-dim); }

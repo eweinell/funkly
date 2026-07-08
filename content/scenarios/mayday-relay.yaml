@@ -1,0 +1,180 @@
+# Funkly Szenario — MAYDAY RELAY (UC-08)
+# Weiterleitung einer fremden Notmeldung. Notverkehr immer Englisch.
+schemaVersion: 2
+id: mayday-relay
+useCase: UC-08
+module: src
+difficulty: advanced
+languagePolicy: distress-english
+noiseLevel: 0.18
+maxReplays: null
+
+title:
+  en: Relaying a distress (MAYDAY RELAY)
+  de: Notmeldung weiterleiten (MAYDAY RELAY)
+
+briefing:
+  en: >-
+    You overheard a MAYDAY from the small motor vessel Seestern: taking on water
+    off Fehmarn, position 54 degrees 28 minutes north, 011 degrees 10 minutes
+    east, two persons on board. No coast station answered and Seestern has gone
+    silent. Relay the distress to Bremen Rescue Radio using MAYDAY RELAY — you
+    are not in distress yourself, so identify with your own vessel and pass on
+    Seestern's details. Distress traffic is in English.
+  de: >-
+    Sie haben einen MAYDAY des kleinen Motorschiffs Seestern mitgehoert:
+    Wassereinbruch vor Fehmarn, Position 54 Grad 28 Minuten Nord, 011 Grad 10
+    Minuten Ost, zwei Personen an Bord. Keine Kuestenfunkstelle hat geantwortet
+    und Seestern ist verstummt. Leiten Sie die Notmeldung mit MAYDAY RELAY an
+    Bremen Rescue Radio weiter — Sie sind selbst nicht in Not, identifizieren
+    sich also mit dem eigenen Schiff und geben Seesterns Angaben weiter.
+    Notverkehr auf Englisch.
+
+stations:
+  - id: bremen-rescue
+    name: Bremen Rescue Radio
+    role: >-
+      German MRCC (Bremen Rescue Radio). Receives the relayed distress,
+      acknowledges with RECEIVED MAYDAY, and may ask the relaying vessel for its
+      own position and whether it can proceed to assist. Calm, authoritative,
+      textbook SMCP.
+    voice:
+      provider: polly
+      voiceId: Brian
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR, MOEWE, TARA]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821, DB6390, DE7154]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+  positionPool:
+    - en: 54 degrees 33 minutes north, 011 degrees 08 minutes east (approx. 3 NM from Seestern)
+      de: 54 Grad 33 Minuten Nord, 011 Grad 08 Minuten Ost (ca. 3 sm von Seestern)
+
+phases:
+  - id: relay-call
+    expect: call
+    label:
+      en: MAYDAY RELAY call
+      de: MAYDAY-RELAY-Anruf
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      The trainee opens with MAYDAY RELAY spoken three times, addresses Bremen
+      Rescue Radio (or ALL STATIONS), THIS IS, then their OWN vessel name three
+      times plus callsign/MMSI. They must NOT say plain "MAYDAY" as if they were
+      in distress. Mark complete once MAYDAY RELAY x3 and the trainee's own
+      identification are given. Answer only briefly; the relayed detail follows.
+    hints:
+      en: "Start with MAYDAY RELAY three times, address Bremen Rescue, THIS IS, then YOUR own vessel name three times and callsign — you are the relaying station."
+      de: "Beginne mit MAYDAY RELAY dreimal, richte an Bremen Rescue, THIS IS, dann DEIN eigenes Schiff dreimal und Rufzeichen — du bist die weiterleitende Station."
+    sampleSolution:
+      en: "MAYDAY RELAY, MAYDAY RELAY, MAYDAY RELAY. Bremen Rescue Radio, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One, over."
+      de: "MAYDAY RELAY, MAYDAY RELAY, MAYDAY RELAY. Bremen Rescue Radio, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One, over."
+
+  - id: relay-message
+    expect: message
+    label:
+      en: Pass on the distress
+      de: Notmeldung weitergeben
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      The trainee passes on Seestern's distress: the name of the vessel in
+      distress (Seestern), its position, nature of distress (taking on water),
+      persons on board, and that the MAYDAY was overheard with no answer. If an
+      element is missing, ask for it in character. Mark complete once the
+      relayed message is sufficiently complete, then acknowledge in the next
+      phase.
+    hints:
+      en: "Give the distressed vessel's name, its position, nature of distress and persons on board, and that you overheard the MAYDAY with no answer."
+      de: "Nenne Namen des Schiffs in Not, seine Position, Art der Not und Personen an Bord und dass du den MAYDAY ohne Antwort mitgehoert hast."
+    sampleSolution:
+      en: >-
+        The vessel in distress is motor vessel Seestern. Her position is 54
+        degrees 28 minutes north, 011 degrees 10 minutes east. Taking on water,
+        two persons on board. I overheard her MAYDAY, no station answered and she
+        is now silent. My position is 3 nautical miles north, I can proceed to
+        assist. Over.
+      de: >-
+        The vessel in distress is motor vessel Seestern. Her position is 54
+        degrees 28 minutes north, 011 degrees 10 minutes east. Taking on water,
+        two persons on board. I overheard her MAYDAY, no station answered and she
+        is now silent. My position is 3 nautical miles north, I can proceed to
+        assist. Over.
+
+  - id: acknowledge-close
+    expect: closing
+    label:
+      en: Acknowledge & stand by
+      de: Quittung & auf Empfang
+    station: bremen-rescue
+    expectedChannel: 16
+    direction: >-
+      Acknowledge the relayed distress ("MAYDAY RELAY, Bluebird, THIS IS Bremen
+      Rescue Radio, RECEIVED") and ask the trainee to proceed to assist / stand
+      by. The trainee confirms and stands by. Mark the exercise complete once the
+      relay is acknowledged and the trainee confirms standing by. Set done.
+    hints:
+      en: "Confirm you will proceed to assist and stand by for Bremen Rescue on channel 16."
+      de: "Bestaetige, dass du zur Hilfeleistung laeufst, und bleib fuer Bremen Rescue auf Kanal 16 auf Empfang."
+    sampleSolution:
+      en: "Bremen Rescue Radio, this is Bluebird, proceeding to assist, standing by on channel one-six, over."
+      de: "Bremen Rescue Radio, this is Bluebird, proceeding to assist, standing by on channel one-six, over."
+
+rubric:
+  - id: relay-proword
+    weight: 3
+    criterion:
+      en: "Uses MAYDAY RELAY (three times), not plain MAYDAY; makes clear the vessel is relaying, not itself in distress."
+      de: "Verwendet MAYDAY RELAY (dreimal), nicht blosses MAYDAY; macht klar, dass weitergeleitet wird und man nicht selbst in Not ist."
+    appliesTo: [relay-call]
+  - id: own-identification
+    weight: 2
+    criterion:
+      en: "Identifies with the relaying vessel's own name and callsign/MMSI, distinct from the distressed vessel."
+      de: "Identifiziert sich mit dem eigenen Schiffsnamen und Rufzeichen/MMSI, getrennt vom Schiff in Not."
+    appliesTo: [relay-call]
+  - id: relayed-content-completeness
+    weight: 3
+    criterion:
+      en: "Relays the distressed vessel's name, position, nature of distress and persons on board, and that no station answered."
+      de: "Gibt Name, Position, Art der Not und Personen an Bord des Schiffs in Not weiter sowie dass keine Station geantwortet hat."
+    appliesTo: [relay-message]
+  - id: english-throughout
+    weight: 2
+    criterion:
+      en: "English used throughout the distress traffic, regardless of session language."
+      de: "Durchgehend Englisch im gesamten Notverkehr, unabhaengig von der Sessionsprache."
+  - id: prowords-position
+    weight: 2
+    criterion:
+      en: "Position in a valid format; correct prowords and ending (OVER when a reply is expected)."
+      de: "Position in gueltigem Format; korrekte Prowords und Abschluss (OVER, wenn eine Antwort erwartet wird)."
+
+sampleSolution:
+  en: >-
+    MAYDAY RELAY, MAYDAY RELAY, MAYDAY RELAY. Bremen Rescue Radio, THIS IS
+    sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One,
+    over. — The vessel in distress is motor vessel Seestern, position 54 degrees
+    28 minutes north, 011 degrees 10 minutes east, taking on water, two persons
+    on board. I overheard her MAYDAY, no station answered, she is now silent. My
+    position is 3 nautical miles north, I can proceed to assist. Over. — (Bremen
+    Rescue Radio: MAYDAY RELAY, Bluebird, THIS IS Bremen Rescue Radio, RECEIVED,
+    proceed to assist, report on scene. Over.) — Bremen Rescue Radio, this is
+    Bluebird, proceeding to assist, standing by on channel one-six, over.
+  de: >-
+    MAYDAY RELAY, MAYDAY RELAY, MAYDAY RELAY. Bremen Rescue Radio, THIS IS
+    sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One,
+    over. — The vessel in distress is motor vessel Seestern, position 54 degrees
+    28 minutes north, 011 degrees 10 minutes east, taking on water, two persons
+    on board. I overheard her MAYDAY, no station answered, she is now silent. My
+    position is 3 nautical miles north, I can proceed to assist. Over. — (Bremen
+    Rescue Radio: MAYDAY RELAY, Bluebird, THIS IS Bremen Rescue Radio, RECEIVED.)
+    — Bremen Rescue Radio, this is Bluebird, proceeding to assist, standing by on
+    channel one-six, over. (Notverkehr immer auf Englisch.)
+
+tags: [distress, mayday-relay, english-only, advanced]

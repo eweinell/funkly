@@ -1,0 +1,8 @@
+.list { display: grid; gap: 6px; min-width: 220px; }
+.list button {
+  text-align: left; padding: 9px 12px; cursor: pointer;
+  font-family: var(--font-lcd); font-size: 13px;
+  color: var(--lcd-amber); background: #1a1408; border: 1px solid #3a2c10;
+  border-radius: var(--r-sm);
+}
+.list button:hover { border-color: var(--lcd-amber-dim); }

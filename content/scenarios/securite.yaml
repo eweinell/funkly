@@ -1,0 +1,143 @@
+# Funkly Szenario — SECURITE (Sicherheit) (UC-11)
+# Sicherheitsmeldung absetzen (navigatorische Warnung). Sicherheitsverkehr immer Englisch.
+schemaVersion: 2
+id: securite
+useCase: UC-11
+module: src
+difficulty: intermediate
+languagePolicy: distress-english
+noiseLevel: 0.15
+maxReplays: null
+
+title:
+  en: Safety message (SECURITE)
+  de: Sicherheitsmeldung (SECURITE)
+
+briefing:
+  en: >-
+    You have sighted a large drifting container, a hazard to navigation, in the
+    Fehmarn Belt. Broadcast a SECURITE safety message on channel 16 to warn
+    other traffic: SECURITE x3, All Stations x3, THIS IS vessel x3, then the
+    hazard, its position and a recommendation, ending with OUT (no reply
+    expected). Safety traffic is in English.
+  de: >-
+    Sie haben im Fehmarnbelt einen grossen treibenden Container gesichtet — eine
+    Gefahr fuer die Schifffahrt. Setzen Sie eine SECURITE-Sicherheitsmeldung auf
+    Kanal 16 ab, um andere zu warnen: SECURITE x3, All Stations x3, THIS IS
+    Schiff x3, dann die Gefahr, ihre Position und eine Empfehlung, Abschluss mit
+    OUT (keine Antwort erwartet). Sicherheitsverkehr auf Englisch.
+
+stations:
+  - id: coast-traffic
+    name: Travemuende Traffic
+    role: >-
+      German VTS / coast station (Travemuende Traffic) monitoring channel 16.
+      Overhears the safety broadcast and gives a brief acknowledgement of
+      receipt. Does not turn it into a dialogue; an all-stations safety message
+      is a broadcast. Calm, professional SMCP.
+    voice:
+      provider: polly
+      voiceId: Amy
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR, MOEWE, TARA]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821, DB6390, DE7154]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+  positionPool:
+    - en: 54 degrees 36 minutes north, 011 degrees 12 minutes east (Fehmarn Belt)
+      de: 54 Grad 36 Minuten Nord, 011 Grad 12 Minuten Ost (Fehmarnbelt)
+    - en: 54 degrees 33 minutes north, 011 degrees 20 minutes east (Fehmarn Belt, eastern part)
+      de: 54 Grad 33 Minuten Nord, 011 Grad 20 Minuten Ost (Fehmarnbelt, oestlicher Teil)
+
+phases:
+  - id: safety-call
+    expect: call
+    label:
+      en: SECURITE call
+      de: SECURITE-Anruf
+    station: coast-traffic
+    expectedChannel: 16
+    direction: >-
+      The trainee opens with SECURITE spoken three times, addresses ALL STATIONS
+      (three times), THIS IS, then own vessel name three times and callsign. Do
+      not reply yet. Mark complete once SECURITE x3 and the all-stations
+      identification are given.
+    hints:
+      en: "Start with SECURITE three times, address All Stations three times, THIS IS, then your vessel name three times and callsign."
+      de: "Beginne mit SECURITE dreimal, richte an All Stations dreimal, THIS IS, dann Schiffsname dreimal und Rufzeichen."
+    sampleSolution:
+      en: "SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One."
+      de: "SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One."
+
+  - id: safety-message
+    expect: message
+    label:
+      en: Safety message
+      de: Sicherheitsmeldung
+    station: coast-traffic
+    expectedChannel: 16
+    direction: >-
+      The trainee gives the safety message: the nature of the hazard (large
+      drifting container), its position, and a recommendation to other traffic
+      (keep clear / navigate with caution), ending with OUT (this is a broadcast,
+      no reply expected). After the message, give a brief acknowledgement of
+      receipt as the coast station. Mark the exercise complete once the safety
+      message is complete and correctly ended with OUT. Set done.
+    hints:
+      en: "State the hazard, give its position, add a recommendation to other traffic, and end with OUT (not OVER)."
+      de: "Nenne die Gefahr, gib ihre Position an, ergaenze eine Empfehlung an andere und beende mit OUT (nicht OVER)."
+    sampleSolution:
+      en: >-
+        Large drifting container, hazard to navigation, in position 54 degrees 36
+        minutes north, 011 degrees 12 minutes east, Fehmarn Belt. All vessels are
+        advised to keep clear and navigate with caution. Out.
+      de: >-
+        Large drifting container, hazard to navigation, in position 54 degrees 36
+        minutes north, 011 degrees 12 minutes east, Fehmarn Belt. All vessels are
+        advised to keep clear and navigate with caution. Out.
+
+rubric:
+  - id: securite-structure
+    weight: 3
+    criterion:
+      en: "Safety call: SECURITE three times, All Stations three times, THIS IS, own vessel three times and callsign."
+      de: "Sicherheitsanruf: SECURITE dreimal, All Stations dreimal, THIS IS, eigenes Schiff dreimal und Rufzeichen."
+    appliesTo: [safety-call]
+  - id: hazard-and-position
+    weight: 3
+    criterion:
+      en: "Names the hazard clearly, gives its position in a valid format and a recommendation to other traffic."
+      de: "Nennt die Gefahr klar, gibt ihre Position in gueltigem Format und eine Empfehlung an andere an."
+    appliesTo: [safety-message]
+  - id: broadcast-ending
+    weight: 2
+    criterion:
+      en: "Ends the all-stations broadcast with OUT (no reply expected), not OVER."
+      de: "Beendet die All-Stations-Rundsendung mit OUT (keine Antwort erwartet), nicht OVER."
+    appliesTo: [safety-message]
+  - id: english-throughout
+    weight: 2
+    criterion:
+      en: "English used throughout the safety traffic, regardless of session language."
+      de: "Durchgehend Englisch im gesamten Sicherheitsverkehr, unabhaengig von der Sessionsprache."
+
+sampleSolution:
+  en: >-
+    SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS
+    IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One.
+    Large drifting container, hazard to navigation, in position 54 degrees 36
+    minutes north, 011 degrees 12 minutes east, Fehmarn Belt. All vessels are
+    advised to keep clear and navigate with caution. Out.
+  de: >-
+    SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS
+    IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One.
+    Large drifting container, hazard to navigation, in position 54 degrees 36
+    minutes north, 011 degrees 12 minutes east, Fehmarn Belt. All vessels are
+    advised to keep clear and navigate with caution. Out.
+    (Sicherheitsverkehr immer auf Englisch.)
+
+tags: [safety, securite, english-only, navigational-warning]

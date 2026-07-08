@@ -1,0 +1,120 @@
+# Funkly Szenario — Radio Check (UC-01)
+# Migration aus backend/src/scenarios.ts (M1) auf Content-Schema v2.
+# Validierung: siehe content/SCHEMA.md ("Validierung").
+schemaVersion: 2
+id: radio-check
+useCase: UC-01
+module: src
+difficulty: beginner
+languagePolicy: bilingual
+noiseLevel: 0.12
+maxReplays: null
+
+title:
+  en: Radio Check
+  de: Radio Check
+
+briefing:
+  en: >-
+    You are underway in the Baltic. Call Lyngby Radio on channel 16 and request
+    a radio check. Use the full calling procedure and correct prowords.
+  de: >-
+    Sie sind in der Ostsee unterwegs. Rufen Sie Lyngby Radio auf Kanal 16 und
+    bitten Sie um einen Radio Check. Nutzen Sie das vollstaendige Anrufschema
+    und die korrekten Prowords.
+
+stations:
+  - id: lyngby-radio
+    name: Lyngby Radio
+    role: >-
+      Danish coast station handling routine VHF traffic. Calm, professional,
+      textbook SMCP phraseology. Speaks a little slowly for a beginner trainee.
+    voice:
+      provider: polly
+      voiceId: Amy
+      engine: neural
+      language: en-GB
+
+setup:
+  vesselPool: [ALBATROS, BLUEBIRD, CALYPSO, NORDWIND, PELIKAN, SEASTAR]
+  callsignPool: [DK2077, DL4511, DM3082, DJ5643, DK8821]
+  mmsi:
+    midPrefix: "211"
+    randomDigits: 6
+  positionPool:
+    - en: 54 degrees 32 minutes north, 011 degrees 05 minutes east (approx. 5 NM north of Fehmarn)
+      de: 54 Grad 32 Minuten Nord, 011 Grad 05 Minuten Ost (ca. 5 sm noerdlich Fehmarn)
+
+phases:
+  - id: call
+    expect: call
+    label:
+      en: Call & request
+      de: Anruf & Anliegen
+    station: lyngby-radio
+    expectedChannel: 16
+    direction: >-
+      The trainee performs a radio check request: station name (1-3x), THIS IS,
+      own vessel name + callsign (1-3x), the radio check request, OVER. Reply in
+      character with a readability report (e.g. "I read you five" / a value 1-5).
+      Do not lecture; corrections belong in the evaluation, not in the reply.
+    hints:
+      en: "Call the station, say THIS IS, give your vessel and callsign, then ask for a radio check. End with OVER."
+      de: "Rufe die Station, sage THIS IS, nenne Schiff und Rufzeichen, bitte dann um einen Radio Check. Schliesse mit OVER."
+    sampleSolution:
+      en: "Lyngby Radio, Lyngby Radio, this is sailing yacht Bluebird, Delta Kilo Four Five One One, radio check, over."
+      de: "Lyngby Radio, Lyngby Radio, hier ist Segelyacht Bluebird, Delta Kilo Four Five One One, Radio Check, over."
+
+  - id: closing
+    expect: closing
+    label:
+      en: Acknowledge & close
+      de: Bestaetigen & beenden
+    station: lyngby-radio
+    expectedChannel: 16
+    direction: >-
+      After you have given the readability report, the trainee should acknowledge
+      it (e.g. "received, I read you five as well") and close the exchange with
+      OUT. The exercise is complete once the trainee closes properly. Set done.
+    hints:
+      en: "Acknowledge the readability report and close with OUT (never 'over and out')."
+      de: "Bestaetige den Readability-Report und beende mit OUT (niemals 'over and out')."
+    sampleSolution:
+      en: "Lyngby Radio, this is Bluebird, received, thank you, out."
+      de: "Lyngby Radio, hier ist Bluebird, verstanden, danke, out."
+
+rubric:
+  - id: calling-structure
+    weight: 3
+    criterion:
+      en: "Calling structure: station called first, THIS IS, own vessel name and callsign in the correct order."
+      de: "Anrufstruktur: Station zuerst, THIS IS, eigener Schiffsname und Rufzeichen in der richtigen Reihenfolge."
+  - id: prowords
+    weight: 3
+    criterion:
+      en: "Correct prowords: OVER when expecting a reply, OUT to close; no invented prowords such as 'roger over and out'."
+      de: "Korrekte Prowords: OVER wenn eine Antwort erwartet wird, OUT zum Beenden; keine erfundenen Prowords wie 'roger over and out'."
+  - id: phonetic-alphabet
+    weight: 2
+    criterion:
+      en: "Callsign spelled with the ICAO/NATO phonetic alphabet (Delta Kilo ...), not read as plain letters."
+      de: "Rufzeichen mit dem ICAO/NATO-Buchstabieralphabet buchstabiert (Delta Kilo ...), nicht als blosse Buchstaben."
+  - id: brevity-channel-discipline
+    weight: 2
+    criterion:
+      en: "Brevity and channel discipline: concise transmission, correct use of channel 16 for the call."
+      de: "Knappheit und Kanaldisziplin: knapper Spruch, korrekte Nutzung von Kanal 16 fuer den Anruf."
+
+sampleSolution:
+  en: >-
+    Lyngby Radio, Lyngby Radio, this is sailing yacht Bluebird, Delta Kilo Four
+    Five One One, radio check, over. — (Lyngby Radio: Sailing yacht Bluebird,
+    this is Lyngby Radio, I read you five, over.) — Lyngby Radio, this is
+    Bluebird, received, I read you five as well, thank you, out.
+  de: >-
+    Lyngby Radio, Lyngby Radio, hier ist Segelyacht Bluebird, Delta Kilo Four
+    Five One One, Radio Check, over. — (Lyngby Radio: Segelyacht Bluebird, hier
+    ist Lyngby Radio, ich lese Sie fuenf, over.) — Lyngby Radio, hier ist
+    Bluebird, verstanden, ich lese Sie ebenfalls fuenf, danke, out.
+
+tags: [routine, coast-station, beginner]

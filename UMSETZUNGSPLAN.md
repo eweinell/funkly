@@ -43,7 +43,7 @@ daher zuerst und allein.
 |---|---|---|
 | Engine-Umbau: Content-Pakete laden, Phasen-Tracking, Bewertungs-Split Haiku/Sonnet | `funkly-backend` | UC-03…12 (Serverseite), UC-16 |
 | Szenarien als Content-Paket v2: UC-03, 04, 05, 06, 08, 10, 11, 12 (+ Migration der 3 M1-Szenarien) | `funkly-content-author` | UC-03…12 (Inhalt) |
-| DSC-Bedienteil (Distress-Taste, Controller-Display, Alert-Empfang), Feedback-Panel-Ausbau | `funkly-frontend` | UC-13, 14, 15, 22 |
+| **Zuerst:** Frontend-Refactoring nach UI-SPEZIFIKATION §8 (Komponenten, CSS Modules, Tokens, Session-Store) bei identischem M1-Verhalten; **danach:** DSC-Bedienteil, Kanal-Mechanik, Feedback-Panel v2, Audio-Verhalten (UI-SPEZIFIKATION §1–3, 6–7) | `funkly-frontend` | UC-13, 14, 15, 22 |
 | DynamoDB-Tabelle, TTS-Cache-Bucket, AWS-Budget-Alarm | `funkly-infra` | UC-23/25 (Unterbau) |
 | Verifikation Welle 1 | `funkly-qa` | — |
 
@@ -80,8 +80,12 @@ sampleSolution (en+de), difficulty
 ```
 
 **Turn-API v2** (`backend/src/` Typen + `content/SCHEMA.md`-Abschnitt): Response enthält
-Scores je Rubric-ID (nicht nur Gesamtscore), aktuelle Phase, `done`. Frontend-Feedback-Panel
-und Fortschrittsspeicherung (UC-23) hängen daran.
+Scores **und Verdicts** je Rubric-ID (nicht nur Gesamtscore), aktuelle Phase, `done`.
+Frontend-Feedback-Panel und Fortschrittsspeicherung (UC-23) hängen daran.
+
+Verbindliche Zusatzanforderungen an beide Verträge (Kanal-Mechanik, `maxReplays`,
+`noiseLevel`, DSC-Phasentypen, Diktat-Sollwerte, Phasenlabels/Hints):
+**UI-SPEZIFIKATION.md §9** — dort gepflegt, hier nicht dupliziert.
 
 ---
 
@@ -89,7 +93,8 @@ und Fortschrittsspeicherung (UC-23) hängen daran.
 
 - **Nichts deployen.** Kein `cdk deploy`, keine AWS-Ressourcen anlegen/ändern — Infrastruktur
   ausschließlich als CDK-Code (Tag `app=funkly`), Deploy macht der Mensch bzw. die Hauptsession.
-- Pflichtlektüre vor Arbeitsbeginn: `KONZEPT.md`, `USE-CASES.md`, `README.md`, dieser Plan.
+- Pflichtlektüre vor Arbeitsbeginn: `KONZEPT.md`, `USE-CASES.md`, `README.md`,
+  `UI-SPEZIFIKATION.md` (verbindliche UI/UX- und Mechanik-Entscheidungen), dieser Plan.
 - Nur im eigenen Pfadbereich schreiben (steht je Briefing); Verträge (Abschnitt 3) sind
   read-only, Änderungswünsche gehen als Bericht an die Hauptsession.
 - Keine neuen npm-Abhängigkeiten ohne Begründung im Abschlussbericht; keine Secrets in Code

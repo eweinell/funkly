@@ -1,0 +1,88 @@
+.wrap {
+  min-height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+
+.plate {
+  position: relative;
+  width: 100%; max-width: 360px;
+  padding: 28px 24px 26px;
+  border-radius: var(--r-lg);
+  background: linear-gradient(175deg, var(--housing-hi) 0%, var(--housing) 30%, var(--housing-lo) 100%);
+  border: 1px solid #30383f;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.07),
+    inset 0 -2px 6px rgba(0, 0, 0, 0.6),
+    0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+.screwRow { display: flex; justify-content: space-between; margin-bottom: 4px; }
+.screw {
+  width: 10px; height: 10px; border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #4a545c, #171c20 70%);
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.brand {
+  text-align: center;
+  font-size: 24px; font-weight: 700; letter-spacing: 0.32em;
+  color: var(--text);
+  text-shadow: 0 1px 0 #000;
+  margin-top: 10px;
+}
+.sub {
+  text-align: center;
+  font-size: 10px; letter-spacing: 0.2em; color: var(--text-dim);
+  margin: 4px 0 22px;
+}
+
+.lcd {
+  position: relative;
+  background:
+    repeating-linear-gradient(0deg, transparent 0 3px, rgba(0, 0, 0, 0.12) 3px 4px),
+    radial-gradient(140% 120% at 50% 0%, #241a08 0%, var(--lcd-bg) 55%);
+  border: 3px solid #0a0c0e;
+  border-radius: var(--r-md);
+  box-shadow: inset 0 2px 12px rgba(0, 0, 0, 0.8), 0 1px 0 rgba(255, 255, 255, 0.05);
+  padding: 16px 16px 18px;
+}
+
+.lcdLabel {
+  font-family: var(--font-lcd);
+  font-size: 11px; letter-spacing: 0.14em;
+  color: var(--lcd-amber-dim);
+  text-transform: uppercase;
+  margin-bottom: 10px;
+}
+
+.form { display: flex; gap: 8px; }
+
+.input {
+  flex: 1; min-width: 0;
+  font-family: var(--font-lcd); font-size: 20px; letter-spacing: 0.2em;
+  color: var(--lcd-amber);
+  text-shadow: 0 0 6px rgba(255, 176, 46, 0.45);
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid #3a2c10;
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+}
+.input::placeholder { color: var(--lcd-amber-dim); letter-spacing: 0.2em; }
+.input:focus { outline: none; border-color: var(--lcd-amber-dim); }
+
+.submit {
+  font-family: var(--font-label); font-size: 12px; font-weight: 700; letter-spacing: 0.12em;
+  padding: 0 16px; cursor: pointer;
+  color: #1a0f04; background: linear-gradient(180deg, var(--ptt), var(--ptt-deep));
+  border: 1px solid #5c3a12; border-radius: var(--r-sm);
+  box-shadow: 0 2px 0 #6a3c10;
+}
+.submit:active:not(:disabled) { transform: translateY(1px); box-shadow: none; }
+.submit:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.error {
+  margin-top: 12px;
+  font-family: var(--font-lcd); font-size: 12px; line-height: 1.5;
+  color: var(--fail);
+}
