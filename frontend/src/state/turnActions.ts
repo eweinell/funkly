@@ -49,15 +49,19 @@ export function useTurnEngine(
       const strings = t(language);
       try {
         const chunks = await recorder.current.stop();
-        if (durationSeconds(chunks) < 0.4) {
+        const seconds = durationSeconds(chunks);
+        if (seconds < 0.4) {
+          console.warn("[turn] noCopy: Clip zu kurz", { seconds });
           dispatch({ type: "APPEND_LOG", entry: { kind: "system", text: strings.noCopy } });
           return;
         }
         const transcript = await transcribeClip(chunks, language);
         if (!transcript) {
+          console.warn("[turn] noCopy: Transcribe lieferte leeres Transkript", { seconds, language });
           dispatch({ type: "APPEND_LOG", entry: { kind: "system", text: strings.noCopy } });
           return;
         }
+        console.debug("[turn] transcript", { seconds, transcript });
         dispatch({ type: "APPEND_LOG", entry: { kind: "user", text: transcript } });
         dispatch({ type: "SET_STATUS", status: "station" });
         sounds.startIdleNoise(0.015 + loadAudioSettings().squelch * 0.02);
@@ -144,10 +148,17 @@ export function useTurnEngine(
     sounds.stopIdleNoise();
     turnToken.current += 1;
     const myToken = turnToken.current;
+    // Quittungssounds sind rein kosmetisch: ein Fehler hier darf die Aufnahme
+    // niemals verhindern (sonst bleibt der Status auf "idle" und pttUp verwirft
+    // den Turn stillschweigend).
     try {
       await unlockRadioContext();
       await sounds.unlockAudio();
       sounds.pttClick();
+    } catch (e) {
+      console.warn("[ptt] Quittungssound fehlgeschlagen, Aufnahme laeuft weiter", e);
+    }
+    try {
       dispatch({ type: "SET_STATUS", status: "rx" });
       await recorder.current.start();
     } catch (e) {

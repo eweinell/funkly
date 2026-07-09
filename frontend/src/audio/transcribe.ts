@@ -43,32 +43,75 @@ function toFrames(chunks: Int16Array[], frameBytes = 3200): Uint8Array[] {
   return frames;
 }
 
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** ~1 s Stille (10 Frames a 100 ms) als Nachlauf hinter dem Clip. */
+const TAIL_SILENCE_FRAMES = 10;
+
 /** Aufgenommenen PTT-Clip zu Amazon Transcribe streamen, finales Transkript zurueckgeben. */
 export async function transcribeClip(chunks: Int16Array[], language: Language): Promise<string> {
   const client = await getClient();
   const frames = toFrames(chunks);
+  const languageCode = language === "de" ? "de-DE" : "en-GB";
+  console.debug("[stt] senden", { frames: frames.length, bytes: frames.reduce((n, f) => n + f.length, 0), languageCode });
 
+  // Transcribe erwartet einen Echtzeit-Strom. Wird der komplette Clip auf einmal
+  // hineingekippt und sofort das Stream-Ende signalisiert, schliesst der Service
+  // die Session teils, bevor ein finales Ergebnis (IsPartial=false) entsteht.
+  // Deshalb die Frames gepaced senden (~4x Echtzeit) statt in einem Rutsch.
+  //
+  // Das Ende einer Aeusserung erkennt Transcribe an nachfolgender Stille. Endet
+  // der Strom direkt hinter dem letzten Sprach-Frame, bleibt das letzte Segment
+  // unfinalisiert - deshalb ein Nachlauf aus Stille-Frames.
+  const silence = new Uint8Array(3200);
   async function* audioStream() {
     for (const frame of frames) {
       yield { AudioEvent: { AudioChunk: frame } };
+      await sleep(25);
+    }
+    for (let i = 0; i < TAIL_SILENCE_FRAMES; i++) {
+      yield { AudioEvent: { AudioChunk: silence } };
+      await sleep(25);
     }
   }
 
   const res = await client.send(
     new StartStreamTranscriptionCommand({
-      LanguageCode: language === "de" ? "de-DE" : "en-GB",
+      LanguageCode: languageCode,
       MediaEncoding: "pcm",
       MediaSampleRateHertz: 16000,
       AudioStream: audioStream(),
     })
   );
 
-  let text = "";
+  // Transcribe liefert je Segment erst Zwischenergebnisse (IsPartial=true), die
+  // spaeter durch die finale Fassung ersetzt werden. Beide tragen dieselbe
+  // ResultId. Wir merken uns pro Segment die zuletzt gesehene Fassung, statt nur
+  // die finalen einzusammeln: sonst geht ein am Stream-Ende noch unfinalisiertes
+  // Segment (typisch: das Ende der Meldung) verloren, sobald irgendein anderes
+  // Segment bereits final war.
+  const segments = new Map<string, { text: string; partial: boolean }>();
+  let events = 0;
   for await (const event of res.TranscriptResultStream ?? []) {
+    events++;
     const results = event.TranscriptEvent?.Transcript?.Results ?? [];
     for (const r of results) {
-      if (!r.IsPartial) text += (r.Alternatives?.[0]?.Transcript ?? "") + " ";
+      const alt = r.Alternatives?.[0]?.Transcript ?? "";
+      if (!alt) continue;
+      segments.set(r.ResultId ?? String(segments.size), { text: alt, partial: !!r.IsPartial });
     }
   }
-  return text.trim();
+
+  const parts = [...segments.values()];
+  const final = parts
+    .map((p) => p.text.trim())
+    .filter(Boolean)
+    .join(" ");
+  console.debug("[stt] empfangen", {
+    events,
+    final,
+    segments: parts.length,
+    unfinalized: parts.filter((p) => p.partial).length,
+  });
+  return final;
 }

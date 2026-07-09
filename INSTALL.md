@@ -139,13 +139,17 @@ $env:CDK_DEFAULT_REGION = "eu-west-1"
 npx cdk deploy `
   -c accessCode=<dein-code> `
   -c originSecret=<dein-secret> `
-  -c budgetNotificationEmail=you@example.com -c budgetLimitEur=15 `
+  -c budgetNotificationEmail=you@example.com -c budgetLimitEur=15 -c budgetCurrency=USD `
   -c modelId=eu.anthropic.claude-haiku-4-5 `
   -c evalModelId=eu.anthropic.claude-sonnet-5
 ```
 
 > `-c modelId=…`/`-c evalModelId=…` nur setzen, wenn im Ziel-Account/Region ein regionales
 > Inference-Profil statt des Foundation-Models nötig ist (siehe 4.1).
+>
+> `-c budgetCurrency=…` muss exakt der **Zahlungswährung des AWS-Accounts** entsprechen
+> (Billing-Konsole → Zahlungspräferenzen). Bei Abweichung schlägt `cdk deploy` mit
+> `CREATE_FAILED: ... unit not in supported set: [<Kontowährung>]` fehl.
 
 Die vollständige Liste der Context-/Env-Stellschrauben (Modelle, TTS-Cache, Throttling, Budget …)
 steht in der [README-Konfigurationstabelle](README.md#konfiguration).

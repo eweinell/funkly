@@ -29,13 +29,20 @@ function tone(freq: number, durationMs: number, opts: { type?: OscillatorType; g
   osc.frequency.value = freq;
   const t0 = ac.currentTime + (opts.delayMs ?? 0) / 1000;
   const g = opts.gain ?? 0.15;
+  // Attack/Release muessen in die Tondauer passen, sonst schiebt ein kurzer Ton
+  // (pttClick: 18 ms) den Release-Start vor t0 - bei frischem Context ist
+  // currentTime == 0 und setValueAtTime wirft RangeError (negative Zeit).
+  const dur = durationMs / 1000;
+  const attack = Math.min(0.008, dur * 0.4);
+  const release = Math.min(0.02, dur * 0.4);
+  const releaseStart = t0 + Math.max(attack, dur - release);
   gain.gain.setValueAtTime(0, t0);
-  gain.gain.linearRampToValueAtTime(g, t0 + 0.008);
-  gain.gain.setValueAtTime(g, t0 + durationMs / 1000 - 0.02);
-  gain.gain.linearRampToValueAtTime(0, t0 + durationMs / 1000);
+  gain.gain.linearRampToValueAtTime(g, t0 + attack);
+  gain.gain.setValueAtTime(g, releaseStart);
+  gain.gain.linearRampToValueAtTime(0, t0 + dur);
   osc.connect(gain).connect(ac.destination);
   osc.start(t0);
-  osc.stop(t0 + durationMs / 1000 + 0.02);
+  osc.stop(t0 + dur + 0.02);
 }
 
 /** Klick beim Druecken der Sprechtaste. */

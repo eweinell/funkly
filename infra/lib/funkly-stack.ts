@@ -300,7 +300,11 @@ export class FunklyStack extends cdk.Stack {
     // lich per CDK-Context (`-c budgetNotificationEmail=...` oder per
     // cdk.context.json). Fehlt sie, entsteht bewusst KEIN Budget (Warnung statt
     // stiller Fehlkonfiguration mit falscher/fremder Adresse).
+    // Waehrung muss exakt der Zahlungswaehrung des Accounts entsprechen (AWS
+    // Billing-Praeferenzen), sonst schlaegt CREATE mit "unit not in supported
+    // set" fehl - deshalb per Context uebersteuerbar statt hart auf EUR.
     const budgetLimitEur = Number(this.node.tryGetContext("budgetLimitEur") ?? 10);
+    const budgetCurrency = (this.node.tryGetContext("budgetCurrency") as string | undefined) ?? "USD";
     const budgetNotificationEmail = this.node.tryGetContext("budgetNotificationEmail") as string | undefined;
 
     if (budgetNotificationEmail) {
@@ -309,7 +313,7 @@ export class FunklyStack extends cdk.Stack {
           budgetName: "funkly-monthly-cost",
           budgetType: "COST",
           timeUnit: "MONTHLY",
-          budgetLimit: { amount: budgetLimitEur, unit: "EUR" },
+          budgetLimit: { amount: budgetLimitEur, unit: budgetCurrency },
           // Nur Kosten der mit app=funkly getaggten Ressourcen. Dafuer muss der
           // Tag-Schluessel "app" einmalig in der Billing-Konsole als
           // Cost-Allocation-Tag aktiviert werden - das kann CloudFormation/CDK
