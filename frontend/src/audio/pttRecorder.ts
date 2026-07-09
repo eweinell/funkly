@@ -6,9 +6,21 @@
  * aus einem MediaStreamAudioSourceNode keine Samples, wenn die Context-Rate von
  * der Stream-Rate abweicht (typisch 48 kHz). Das Resampling auf die von Amazon
  * Transcribe erwarteten 16 kHz passiert deshalb hier in JS.
+ *
+ * Live-Streaming (BRIEFING-STT-ECHTZEIT.md Schritt 3): start() nimmt optional
+ * einen onPcm-Callback, der schon WAEHREND der Aufnahme mit resampelten PCM16-
+ * Frames gefuettert wird (statt erst in stop() einmalig). Das Resampling laeuft
+ * dazu ueber den zustandsbehafteten Resampler aus resample.ts, der chunkweise
+ * aufgerufen sample-genau dasselbe liefert wie der fruehere Ein-Schuss-Aufruf
+ * ueber den Gesamtpuffer (s. frontend/scripts/test-resampler.mjs).
  */
 
-const TARGET_RATE = 16000;
+import { TARGET_RATE, createStreamResampler, StreamResampler } from "./resample";
+
+/** Worklet-Bloecke (~128 Samples/2.7 ms bei 48 kHz) werden zu Frames dieser
+ *  Groesse (100 ms bei 16 kHz) gebuendelt, bevor onPcm() sie weiterreicht - sonst
+ *  entstuenden pro Sekunde ~375 Stream-Events statt zehn. */
+const LIVE_FRAME_SAMPLES = 1600;
 
 const WORKLET_SOURCE = `
 class PcmCapture extends AudioWorkletProcessor {
@@ -32,20 +44,15 @@ function getWorkletUrl(): string {
   return workletUrl;
 }
 
-/** Lineare Interpolation von srcRate auf TARGET_RATE, dann Float32 -> PCM16. */
-function resampleToPcm16(input: Float32Array, srcRate: number): Int16Array {
-  const ratio = srcRate / TARGET_RATE;
-  const outLength = Math.floor(input.length / ratio);
-  const out = new Int16Array(outLength);
-  for (let i = 0; i < outLength; i++) {
-    const pos = i * ratio;
-    const i0 = Math.floor(pos);
-    const i1 = Math.min(i0 + 1, input.length - 1);
-    const frac = pos - i0;
-    const sample = input[i0] * (1 - frac) + input[i1] * frac;
-    const s = Math.max(-1, Math.min(1, sample));
-    out[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
-  }
+/** Haengt b hinter a und gibt einen neuen Int16Array zurueck (Kopie). Generisch
+ *  ueber ArrayBufferLike, weil TypedArray#slice() in dieser TS-Lib-Version
+ *  Int16Array<ArrayBufferLike> zurueckgibt statt des engeren Int16Array<ArrayBuffer>. */
+function concatInt16(a: Int16Array<ArrayBufferLike>, b: Int16Array<ArrayBufferLike>): Int16Array<ArrayBufferLike> {
+  if (a.length === 0) return b;
+  if (b.length === 0) return a;
+  const out = new Int16Array(a.length + b.length);
+  out.set(a, 0);
+  out.set(b, a.length);
   return out;
 }
 
@@ -58,24 +65,41 @@ export class PttRecorder {
   private chunks: Float32Array[] = [];
   private srcRate = TARGET_RATE;
 
+  // Live-Resampling-Zustand fuer die Dauer einer Aufnahme.
+  private resampler?: StreamResampler;
+  private onPcm?: (frame: Int16Array) => void;
+  private liveBuffer: Int16Array<ArrayBufferLike> = new Int16Array(0);
+  private resampled: Int16Array<ArrayBufferLike>[] = [];
+
   get recording(): boolean {
     return !!this.ctx;
   }
 
-  async start(): Promise<void> {
+  /**
+   * @param onPcm optionaler Callback: erhaelt waehrend der Aufnahme fortlaufend
+   *   ~100-ms-PCM16-Frames (16 kHz mono), sobald sie resampelt vorliegen. Ohne
+   *   Callback verhaelt sich start()/stop() wie zuvor (Puffern bis stop()).
+   */
+  async start(onPcm?: (frame: Int16Array) => void): Promise<void> {
     if (this.ctx) return;
     this.chunks = [];
+    this.resampled = [];
+    this.liveBuffer = new Int16Array(0);
+    this.onPcm = onPcm;
     this.stream = await navigator.mediaDevices.getUserMedia({
       audio: { echoCancellation: true, noiseSuppression: true, channelCount: 1 },
     });
     this.ctx = new AudioContext();
     this.srcRate = this.ctx.sampleRate;
+    this.resampler = createStreamResampler(this.srcRate);
     if (this.ctx.state === "suspended") await this.ctx.resume();
     await this.ctx.audioWorklet.addModule(getWorkletUrl());
     this.source = this.ctx.createMediaStreamSource(this.stream);
     this.node = new AudioWorkletNode(this.ctx, "pcm-capture");
     this.node.port.onmessage = (e: MessageEvent<ArrayBuffer>) => {
-      this.chunks.push(new Float32Array(e.data));
+      const raw = new Float32Array(e.data);
+      this.chunks.push(raw);
+      this.feedResampler(raw);
     };
     // Der Renderer zieht den Graphen von ctx.destination rueckwaerts: ohne Pfad
     // dorthin laeuft process() nie. Gain 0, damit das Mikrofon nicht mithoerbar wird.
@@ -94,7 +118,25 @@ export class PttRecorder {
     });
   }
 
-  /** Beendet die Aufnahme und liefert PCM16-Chunks (16 kHz mono). */
+  /** Resampelt einen rohen Worklet-Block und buendelt das Ergebnis zu ~100-ms-
+   *  Frames, bevor onPcm() (falls gesetzt) sie erhaelt. Sammelt die Frames
+   *  zusaetzlich in `resampled`, damit stop() daraus die Gesamtausgabe ohne
+   *  einen zweiten (Ein-Schuss-)Resampling-Durchlauf zusammensetzen kann. */
+  private feedResampler(raw: Float32Array): void {
+    const out = this.resampler!.push(raw);
+    this.liveBuffer = concatInt16(this.liveBuffer, out);
+    while (this.liveBuffer.length >= LIVE_FRAME_SAMPLES) {
+      const frame = this.liveBuffer.slice(0, LIVE_FRAME_SAMPLES);
+      this.liveBuffer = this.liveBuffer.slice(LIVE_FRAME_SAMPLES);
+      this.resampled.push(frame);
+      this.onPcm?.(frame);
+    }
+  }
+
+  /** Beendet die Aufnahme und liefert PCM16-Chunks (16 kHz mono). Ist ein
+   *  onPcm-Callback gesetzt, wird auch der letzte (kuerzer als 100 ms lange)
+   *  Rest ueber ihn ausgeliefert - sonst gingen die letzten Silben eines
+   *  Live-Streams verloren. */
   async stop(): Promise<Int16Array[]> {
     const raw = this.chunks;
     const srcRate = this.srcRate;
@@ -110,33 +152,43 @@ export class PttRecorder {
     this.sink = undefined;
     this.chunks = [];
 
+    // Letztes, evtl. unvollstaendiges Rest-Frame plus den geklemmten Tail-Sample
+    // des Resamplers (s. resample.ts) einsammeln, bevor der Resampler-Zustand
+    // fuer die naechste Aufnahme verworfen wird.
+    const tail = concatInt16(this.liveBuffer, this.resampler?.flush() ?? new Int16Array(0));
+    this.liveBuffer = new Int16Array(0);
+    if (tail.length > 0) {
+      this.resampled.push(tail);
+      this.onPcm?.(tail);
+    }
+    const pcm = this.resampled;
+    this.resampled = [];
+    this.resampler = undefined;
+    this.onPcm = undefined;
+
     const total = raw.reduce((n, c) => n + c.length, 0);
     if (total === 0) {
       console.warn("[ptt] stop: worklet lieferte KEINE Samples (process() lief nicht)");
       return [];
     }
-    const merged = new Float32Array(total);
-    let offset = 0;
-    for (const c of raw) {
-      merged.set(c, offset);
-      offset += c.length;
-    }
     let peak = 0;
-    for (let i = 0; i < merged.length; i++) {
-      const a = Math.abs(merged[i]);
-      if (a > peak) peak = a;
+    for (const c of raw) {
+      for (let i = 0; i < c.length; i++) {
+        const a = Math.abs(c[i]);
+        if (a > peak) peak = a;
+      }
     }
-    const pcm = resampleToPcm16(merged, srcRate);
+    const outSamples = pcm.reduce((n, c) => n + c.length, 0);
     console.debug("[ptt] stop", {
       srcRate,
       srcSamples: total,
       srcSeconds: +(total / srcRate).toFixed(2),
       peak: +peak.toFixed(4),
-      outSamples: pcm.length,
-      outSeconds: +(pcm.length / TARGET_RATE).toFixed(2),
+      outSamples,
+      outSeconds: +(outSamples / TARGET_RATE).toFixed(2),
     });
     if (peak < 0.001) console.warn("[ptt] stop: Samples vorhanden, aber Stille (falsches Eingabegeraet?)");
-    return [pcm];
+    return pcm;
   }
 }
 

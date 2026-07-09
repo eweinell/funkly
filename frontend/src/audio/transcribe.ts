@@ -2,7 +2,9 @@ import {
   TranscribeStreamingClient,
   StartStreamTranscriptionCommand,
 } from "@aws-sdk/client-transcribe-streaming";
+import type { TranscriptResultStream } from "@aws-sdk/client-transcribe-streaming";
 import { api, Language } from "../api";
+import { PcmQueue } from "./pcmQueue";
 
 interface CachedCreds {
   client: TranscribeStreamingClient;
@@ -10,37 +12,56 @@ interface CachedCreds {
 }
 
 let cached: CachedCreds | undefined;
+let inFlight: Promise<TranscribeStreamingClient> | undefined;
 
 async function getClient(): Promise<TranscribeStreamingClient> {
   const now = Date.now();
   if (cached && cached.expiresAt - now > 120_000) return cached.client;
-  const { region, credentials } = await api.sttCredentials();
-  const client = new TranscribeStreamingClient({
-    region,
-    credentials: {
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-      sessionToken: credentials.sessionToken,
-    },
-  });
-  cached = { client, expiresAt: new Date(credentials.expiration).getTime() };
-  return client;
+  // Mehrere gleichzeitige Aufrufer (Vorwaerm-Timer + ein laufender PTT-Zyklus)
+  // sollen nicht je eigene STS-Credentials ziehen - auf den bereits laufenden
+  // Abruf warten statt einen zweiten anzustossen.
+  if (inFlight) return inFlight;
+  inFlight = (async () => {
+    const { region, credentials } = await api.sttCredentials();
+    const client = new TranscribeStreamingClient({
+      region,
+      credentials: {
+        accessKeyId: credentials.accessKeyId,
+        secretAccessKey: credentials.secretAccessKey,
+        sessionToken: credentials.sessionToken,
+      },
+    });
+    cached = { client, expiresAt: new Date(credentials.expiration).getTime() };
+    return client;
+  })();
+  try {
+    return await inFlight;
+  } finally {
+    inFlight = undefined;
+  }
 }
 
-/** PCM16-Chunks in ~100-ms-Frames (3200 Bytes) buendeln. */
-function toFrames(chunks: Int16Array[], frameBytes = 3200): Uint8Array[] {
-  const total = chunks.reduce((n, c) => n + c.byteLength, 0);
-  const merged = new Uint8Array(total);
-  let offset = 0;
-  for (const c of chunks) {
-    merged.set(new Uint8Array(c.buffer, c.byteOffset, c.byteLength), offset);
-    offset += c.byteLength;
-  }
-  const frames: Uint8Array[] = [];
-  for (let i = 0; i < merged.length; i += frameBytes) {
-    frames.push(merged.slice(i, i + frameBytes));
-  }
-  return frames;
+/**
+ * Waermt den Credential-Cache vor, damit der erste `pttDown` nach dem Laden eines
+ * Szenarios nicht auf den STS-Roundtrip wartet (der saesse sonst zwischen
+ * Tastendruck und erstem Audio-Frame - die ersten Silben waeren weg,
+ * s. BRIEFING-STT-ECHTZEIT.md Schritt 5).
+ *
+ * Haelt den Cache zusaetzlich ueber die Dauer der Session frisch: Credentials
+ * gelten 900 s, getClient() erneuert erst unter 120 s Restlaufzeit. Ohne
+ * periodisches Nachfassen koennte die Restlaufzeit genau dann unter die Schwelle
+ * fallen, wenn eine PTT-Aufnahme laeuft (bzw. direkt bevor eine neue beginnt) -
+ * der Roundtrip waere wieder in der kritischen Latenz. Der Timer laeuft alle 60 s
+ * (idempotent, ein einziger pro Modul-Lebensdauer) und ruft lediglich getClient()
+ * auf, das selbst entscheidet, ob eine Erneuerung noetig ist.
+ */
+let warmupTimer: ReturnType<typeof setInterval> | undefined;
+export function warmupTranscribeClient(): void {
+  getClient().catch((e) => console.warn("[stt] Vorwaermen fehlgeschlagen", e));
+  if (warmupTimer !== undefined) return;
+  warmupTimer = setInterval(() => {
+    getClient().catch((e) => console.warn("[stt] Erneuerung fehlgeschlagen", e));
+  }, 60_000);
 }
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
@@ -51,52 +72,21 @@ const FRAME_MS = 100;
 /** ~1 s Stille als Nachlauf hinter dem Clip. */
 const TAIL_SILENCE_FRAMES = 10;
 
-/** Aufgenommenen PTT-Clip zu Amazon Transcribe streamen, finales Transkript zurueckgeben. */
-export async function transcribeClip(chunks: Int16Array[], language: Language): Promise<string> {
-  const client = await getClient();
-  const frames = toFrames(chunks);
-  const languageCode = language === "de" ? "de-DE" : "en-GB";
-  console.debug("[stt] senden", { frames: frames.length, bytes: frames.reduce((n, f) => n + f.length, 0), languageCode });
-
-  // Transcribe verarbeitet den Strom in ECHTZEIT (Wanduhr), nicht so schnell wie
-  // er hereinkommt. Frames schneller als Echtzeit zu senden, staut sie nur auf:
-  // beim Stream-Ende verwirft der Service den unverarbeiteten Rest. Ein 7-s-Clip
-  // in 4x Tempo lieferte so nur die ersten ~1-2 s als Transkript. Deshalb genau
-  // FRAME_MS pro Frame warten - langsamer geht nicht, schneller verliert Text.
-  //
-  // Das Ende einer Aeusserung erkennt Transcribe an nachfolgender Stille. Endet
-  // der Strom direkt hinter dem letzten Sprach-Frame, bleibt das letzte Segment
-  // unfinalisiert - deshalb ein Nachlauf aus Stille-Frames.
-  const silence = new Uint8Array(3200);
-  async function* audioStream() {
-    for (const frame of frames) {
-      yield { AudioEvent: { AudioChunk: frame } };
-      await sleep(FRAME_MS);
-    }
-    for (let i = 0; i < TAIL_SILENCE_FRAMES; i++) {
-      yield { AudioEvent: { AudioChunk: silence } };
-      await sleep(FRAME_MS);
-    }
-  }
-
-  const res = await client.send(
-    new StartStreamTranscriptionCommand({
-      LanguageCode: languageCode,
-      MediaEncoding: "pcm",
-      MediaSampleRateHertz: 16000,
-      AudioStream: audioStream(),
-    })
-  );
-
-  // Transcribe liefert je Segment erst Zwischenergebnisse (IsPartial=true), die
-  // spaeter durch die finale Fassung ersetzt werden. Beide tragen dieselbe
-  // ResultId. Wir merken uns pro Segment die zuletzt gesehene Fassung, statt nur
-  // die finalen einzusammeln: sonst geht ein am Stream-Ende noch unfinalisiertes
-  // Segment (typisch: das Ende der Meldung) verloren, sobald irgendein anderes
-  // Segment bereits final war.
+/**
+ * Sammelt TranscriptResultStream-Events in eine ResultId-Segment-Map. Transcribe
+ * liefert je Segment erst Zwischenergebnisse (IsPartial=true), die spaeter durch
+ * die finale Fassung ersetzt werden - beide tragen dieselbe ResultId. Wir merken
+ * uns pro Segment nur die zuletzt gesehene Fassung, statt nur die finalen
+ * einzusammeln: sonst geht ein am Stream-Ende noch unfinalisiertes Segment
+ * (typisch: das Ende der Meldung) verloren, sobald irgendein anderes Segment
+ * bereits final war.
+ */
+async function collectTranscript(
+  stream: AsyncIterable<TranscriptResultStream> | undefined
+): Promise<{ events: number; final: string; segments: number; unfinalized: number }> {
   const segments = new Map<string, { text: string; partial: boolean }>();
   let events = 0;
-  for await (const event of res.TranscriptResultStream ?? []) {
+  for await (const event of stream ?? []) {
     events++;
     const results = event.TranscriptEvent?.Transcript?.Results ?? [];
     for (const r of results) {
@@ -105,17 +95,101 @@ export async function transcribeClip(chunks: Int16Array[], language: Language): 
       segments.set(r.ResultId ?? String(segments.size), { text: alt, partial: !!r.IsPartial });
     }
   }
-
   const parts = [...segments.values()];
   const final = parts
     .map((p) => p.text.trim())
     .filter(Boolean)
     .join(" ");
-  console.debug("[stt] empfangen", {
-    events,
-    final,
-    segments: parts.length,
-    unfinalized: parts.filter((p) => p.partial).length,
-  });
-  return final;
+  return { events, final, segments: parts.length, unfinalized: parts.filter((p) => p.partial).length };
+}
+
+/**
+ * Live-Session fuer die Echtzeit-Uebertragung (BRIEFING-STT-ECHTZEIT.md Schritt 2):
+ * der Transcribe-Stream oeffnet bereits beim Druecken der Sprechtaste und wird
+ * waehrend der Aufnahme fortlaufend mit PCM16-Frames gefuettert, statt erst nach
+ * dem Loslassen mit dem fertigen Clip. Das kuenstliche Pacing entfaellt fuer den
+ * Sprachteil ersatzlos - die Aufnahme *ist* bereits Echtzeit; nur der
+ * Stille-Nachlauf in finish() wartet weiterhin FRAME_MS je Frame.
+ */
+export interface TranscribeSession {
+  /** Reicht einen PCM16-Frame (16 kHz mono) an den laufenden Stream weiter. Nach
+   *  finish()/abort() ein No-op. */
+  pushPcm(chunk: Int16Array): void;
+  /** Schiebt den Stille-Nachlauf nach, schliesst den Stream und liefert das
+   *  finale Transkript. */
+  finish(): Promise<string>;
+  /** Bricht den Stream sofort ab (kein Nachlauf, kein Warten auf Ergebnisse).
+   *  Muss in jedem Fall aufgerufen werden, in dem die Session nicht reibungslos
+   *  per finish() endet - ein offen gelassener Stream laeuft (und kostet) weiter. */
+  abort(): void;
+}
+
+export async function startTranscription(language: Language): Promise<TranscribeSession> {
+  const client = await getClient();
+  const languageCode = language === "de" ? "de-DE" : "en-GB";
+  const queue = new PcmQueue();
+  const controller = new AbortController();
+  const silence = new Uint8Array(3200);
+
+  let closed = false;
+
+  async function* audioStream() {
+    for await (const frame of queue) {
+      yield { AudioEvent: { AudioChunk: frame } };
+    }
+  }
+
+  console.debug("[stt] Session gestartet", { languageCode });
+
+  const resultPromise = (async () => {
+    const res = await client.send(
+      new StartStreamTranscriptionCommand({
+        LanguageCode: languageCode,
+        MediaEncoding: "pcm",
+        MediaSampleRateHertz: 16000,
+        AudioStream: audioStream(),
+      }),
+      { abortSignal: controller.signal }
+    );
+    return collectTranscript(res.TranscriptResultStream);
+  })();
+  // Wird die Session per abort() verworfen, wartet niemand mehr auf resultPromise -
+  // ein Fehler (z. B. durch den AbortController) darf dann nicht als unhandled
+  // rejection auffallen.
+  resultPromise.catch(() => undefined);
+
+  function pushPcm(chunk: Int16Array): void {
+    if (closed) return;
+    queue.push(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength));
+  }
+
+  async function finish(): Promise<string> {
+    if (closed) return "";
+    closed = true;
+    // Stille-Nachlauf: ohne ihn erkennt Transcribe das Ende der Aeusserung nicht
+    // und laesst das letzte Segment unfinalisiert (s. collectTranscript oben).
+    for (let i = 0; i < TAIL_SILENCE_FRAMES; i++) {
+      queue.push(silence);
+      await sleep(FRAME_MS);
+    }
+    queue.close();
+    try {
+      const { events, final, segments, unfinalized } = await resultPromise;
+      console.debug("[stt] Session beendet", { events, final, segments, unfinalized });
+      return final;
+    } catch (e) {
+      console.warn("[stt] Session-Ergebnis fehlgeschlagen", e);
+      return "";
+    }
+  }
+
+  function abort(): void {
+    if (closed) return;
+    closed = true;
+    queue.close();
+    controller.abort();
+    console.debug("[stt] Session abgebrochen");
+  }
+
+  return { pushPcm, finish, abort };
 }

@@ -1,6 +1,7 @@
 import { createContext, ReactNode, useCallback, useContext, useEffect, useMemo, useReducer, useState } from "react";
 import { api, Channel, Language, PanelMode, ScenarioInfo } from "../api";
 import { AudioSettings, loadAudioSettings, saveAudioSettings } from "../audio/radioFx";
+import { warmupTranscribeClient } from "../audio/transcribe";
 import * as sounds from "../audio/sounds";
 import { initialSessionState, sessionReducer } from "./reducer";
 import { SessionState } from "./types";
@@ -58,6 +59,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         .newSession()
         .then((r) => dispatch({ type: "SET_SETUP", setup: r.setup }))
         .catch((e) => dispatch({ type: "SET_ERROR", error: String(e) }));
+      // STT-Credentials vorwaermen (BRIEFING-STT-ECHTZEIT.md Schritt 5): der erste
+      // pttDown soll nicht auf den STS-Roundtrip warten - der saesse sonst zwischen
+      // Tastendruck und erstem Audio-Frame.
+      warmupTranscribeClient();
     },
     [resetHistory]
   );

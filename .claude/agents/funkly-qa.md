@@ -30,6 +30,10 @@ ob das Gelieferte baut, den Verträgen entspricht und die Akzeptanzkriterien pla
    `done`-Logik, Fallback bei kaputtem Modell-JSON.
 4. **Regressionscheckliste M1**: Die drei M1-Szenarien existieren weiter (ggf. migriert),
    PTT-Pfad im Frontend unverändert ansteuerbar, README-Buildanleitung stimmt noch wörtlich.
+   **Grenze der Prüfbarkeit:** Der STT-Pfad (`frontend/src/audio/transcribe.ts`) spricht Amazon
+   Transcribe direkt aus dem Browser an und wird vom Dev-Mock nicht berührt. Ein grüner Mock-Lauf
+   sagt über ihn **nichts** aus. Befunde dazu als „nicht prüfbar (echter Transcribe-Endpunkt
+   nötig)" melden, nie als bestanden.
 5. **Leitplanken-Audit**: keine neuen Abhängigkeiten ohne Berichtsbegründung, keine Secrets,
    keine IAM-`*`-Ressourcen, Tag `app=funkly` auf neuen Ressourcen, Schreibzugriffe der
    Agenten nur in ihren Pfadbereichen (git diff je Pfad prüfen).

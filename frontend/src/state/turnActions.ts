@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { api, Channel, Language, PanelMode, TurnResponseV2 } from "../api";
 import { PttRecorder, durationSeconds } from "../audio/pttRecorder";
-import { transcribeClip } from "../audio/transcribe";
+import { startTranscription, TranscribeSession } from "../audio/transcribe";
 import { playRadio, stopPlayback, loadAudioSettings, unlockRadioContext } from "../audio/radioFx";
 import * as sounds from "../audio/sounds";
 import { t } from "../i18n";
@@ -26,6 +26,17 @@ export function useTurnEngine(
   const recorder = useRef(new PttRecorder());
   const history = useRef<{ role: "user" | "assistant"; content: string }[]>([]);
   const turnToken = useRef(0);
+  // Die zum aktuellen turnToken gehoerende, laufende Transcribe-Session (STT-Echtzeit,
+  // BRIEFING-STT-ECHTZEIT.md Schritt 4). Traegt den Token mit, damit pttDown eine noch
+  // offene Session einer ueberholten Runde (Barge-in) sicher erkennen und abbrechen kann.
+  const activeSession = useRef<{ token: number; session: TranscribeSession } | undefined>(undefined);
+  // Aufloesung, sobald pttDown seinen Startvorgang abgeschlossen hat (Recorder laeuft,
+  // Session steht bzw. beides ist fehlgeschlagen). Ein kurzes Antippen der Sprechtaste
+  // laesst pttUp feuern, waehrend pttDown noch in `getUserMedia()` haengt: endTurn saehe
+  // dann `recording === false`, kehrte vor dem try zurueck - und pttDown oeffnete danach
+  // eine Session, die niemand mehr schliesst (offener Transcribe-Stream, laufendes Mikro).
+  // Deshalb wartet endTurn den Start ab, statt einen Zwischenzustand zu inspizieren.
+  const startup = useRef<Promise<void> | undefined>(undefined);
   const [ch70Flash, setCh70Flash] = useState(false);
 
   const stateRef = useRef(state);
@@ -43,19 +54,42 @@ export function useTurnEngine(
 
   const endTurn = useCallback(
     async (myToken: number) => {
+      // Erst den Startvorgang zu Ende laufen lassen (s. `startup` oben), sonst
+      // beurteilen wir Recorder und Session, bevor es sie gibt.
+      await startup.current;
       const s = stateRef.current;
-      if (!recorder.current.recording || !s.scenario || !s.setup) return;
+      if (!recorder.current.recording || !s.scenario || !s.setup) {
+        // Startvorgang fehlgeschlagen (pttDown hat Status/Fehler bereits gesetzt und
+        // seine Session abgebrochen). Eine dennoch offene Session darf nicht bleiben.
+        if (activeSession.current?.token === myToken) {
+          activeSession.current.session.abort();
+          activeSession.current = undefined;
+        }
+        return;
+      }
       dispatch({ type: "SET_STATUS", status: "stt" });
       const strings = t(language);
+      // Die zu diesem Turn gehoerende Session (falls pttDown eine oeffnen konnte -
+      // bei Mikrofon-/Netzfehlern in pttDown kann sie fehlen, s. dort).
+      const mySession = activeSession.current?.token === myToken ? activeSession.current.session : undefined;
+      const releaseSession = () => {
+        if (activeSession.current?.token === myToken) activeSession.current = undefined;
+      };
       try {
         const chunks = await recorder.current.stop();
         const seconds = durationSeconds(chunks);
         if (seconds < 0.4) {
           console.warn("[turn] noCopy: Clip zu kurz", { seconds });
+          // Transcribe-Streaming wird nach gesendeter Audiosekunde abgerechnet - ein
+          // zu kurzer Clip liefert ohnehin kein brauchbares Transkript, also sofort
+          // abbrechen statt den Stille-Nachlauf von finish() abzuwarten.
+          mySession?.abort();
+          releaseSession();
           dispatch({ type: "APPEND_LOG", entry: { kind: "system", text: strings.noCopy } });
           return;
         }
-        const transcript = await transcribeClip(chunks, language);
+        const transcript = mySession ? await mySession.finish() : "";
+        releaseSession();
         if (!transcript) {
           console.warn("[turn] noCopy: Transcribe lieferte leeres Transkript", { seconds, language });
           dispatch({ type: "APPEND_LOG", entry: { kind: "system", text: strings.noCopy } });
@@ -121,6 +155,12 @@ export function useTurnEngine(
           await playRadio(result.audioBase64, { volume: settings.volume, noise: settings.squelch });
         }
       } catch (e) {
+        // abort() ist ein No-op, falls finish()/abort() diesen Turn schon
+        // abgeschlossen hat (s. transcribe.ts) - hier trotzdem unbedingt aufrufen,
+        // damit ein Fehler VOR dem regulaeren finish()-Aufruf keinen offenen
+        // Stream zuruecklaesst.
+        mySession?.abort();
+        releaseSession();
         dispatch({ type: "SET_ERROR", error: String(e) });
       } finally {
         sounds.stopIdleNoise();
@@ -148,6 +188,19 @@ export function useTurnEngine(
     sounds.stopIdleNoise();
     turnToken.current += 1;
     const myToken = turnToken.current;
+    // Ab hier laeuft ein Startvorgang, auf den endTurn warten muss. `finished` wird
+    // im finally unten IMMER aufgeloest - auch auf jedem Fehlerpfad, sonst haengt ein
+    // spaeteres endTurn ewig.
+    let finished!: () => void;
+    startup.current = new Promise<void>((resolve) => (finished = resolve));
+    // Barge-in-Absicherung: sollte von einer ueberholten Runde noch eine offene
+    // Transcribe-Session haengen (sie haette denselben Turn-Zyklus laengst per
+    // finish()/abort() schliessen muessen), hier aktiv abbrechen statt sie nur
+    // stillschweigend zu verwaisen - ein nicht geschlossener Stream kostet weiter.
+    if (activeSession.current && activeSession.current.token !== myToken) {
+      activeSession.current.session.abort();
+      activeSession.current = undefined;
+    }
     // Quittungssounds sind rein kosmetisch: ein Fehler hier darf die Aufnahme
     // niemals verhindern (sonst bleibt der Status auf "idle" und pttUp verwirft
     // den Turn stillschweigend).
@@ -158,15 +211,56 @@ export function useTurnEngine(
     } catch (e) {
       console.warn("[ptt] Quittungssound fehlgeschlagen, Aufnahme laeuft weiter", e);
     }
+    // Ausserhalb des try deklariert, damit der catch-Block darauf zugreifen und
+    // eine bereits eroeffnete Session auch bei einem unerwarteten Fehler
+    // zuverlaessig abbrechen kann (kein offener Stream darf zurueckbleiben).
+    let session: TranscribeSession | undefined;
     try {
       dispatch({ type: "SET_STATUS", status: "rx" });
-      await recorder.current.start();
+      // Recorder und Transcribe-Session starten GEMEINSAM (BRIEFING-STT-ECHTZEIT.md
+      // Schritt 4): der Recorder braucht sofort einen onPcm-Callback, die Session
+      // steht aber erst nach ihrem eigenen (evtl. schon vorgewaermten) Netz-Roundtrip.
+      // Bis dahin auftretende Frames werden gepuffert statt verworfen zu werden.
+      const pending: Int16Array[] = [];
+      const forwardPcm = (frame: Int16Array) => {
+        if (session) session.pushPcm(frame);
+        else pending.push(frame);
+      };
+      const [recResult, sessResult] = await Promise.allSettled([
+        recorder.current.start(forwardPcm),
+        startTranscription(language),
+      ]);
+      if (sessResult.status === "fulfilled") session = sessResult.value;
+      if (recResult.status === "rejected" || sessResult.status === "rejected") {
+        // Mikrofon- oder Session-Fehler: keine offene Session zuruecklassen (Schritt 4).
+        session?.abort();
+        await recorder.current.stop().catch(() => undefined);
+        const reason = recResult.status === "rejected" ? recResult.reason : sessResult.status === "rejected" ? sessResult.reason : undefined;
+        dispatch({ type: "SET_STATUS", status: "idle" });
+        dispatch({ type: "SET_ERROR", error: "Mikrofon: " + String(reason) });
+        return;
+      }
+      if (!session) {
+        // Kann durch die Pruefung oben eigentlich nie eintreten - rein defensiv
+        // (und fuers TS-Narrowing, das `session` wegen der Closure forwardPcm
+        // nicht ueber diesen Punkt hinaus als sicher gesetzt betrachtet).
+        dispatch({ type: "SET_STATUS", status: "idle" });
+        dispatch({ type: "SET_ERROR", error: "Mikrofon: STT-Session fehlt" });
+        return;
+      }
+      for (const frame of pending) session.pushPcm(frame);
+      activeSession.current = { token: myToken, session };
     } catch (e) {
+      session?.abort();
       dispatch({ type: "SET_STATUS", status: "idle" });
       dispatch({ type: "SET_ERROR", error: "Mikrofon: " + String(e) });
+    } finally {
+      // Auf JEDEM Pfad - auch den beiden `return`s oben: ein wartendes endTurn
+      // darf niemals haengen bleiben.
+      finished();
     }
     return myToken;
-  }, [state.scenario, state.setup, state.done, state.channel.current, pttLocked, dispatch, flashCh70]);
+  }, [state.scenario, state.setup, state.done, state.channel.current, pttLocked, dispatch, flashCh70, language]);
 
   const pttUp = useCallback(() => {
     if (state.status !== "rx") return;

@@ -1,6 +1,6 @@
 ---
 name: funkly-frontend
-description: Funkly-Frontend-Arbeitspakete — DSC-Bedienteil und Feedback-Ausbau (Welle 1), danach Quiz/Diktat/Prüfungsmodus/PWA-Offline (Welle 2), plus Querschnittspaket Zugangsschutz V1 (Zugangscode-Gate + Header). Das konkrete Paket nennt der Auftraggeber.
+description: Funkly-Frontend-Arbeitspakete — DSC-Bedienteil und Feedback-Ausbau (Welle 1), danach Quiz/Diktat/Prüfungsmodus/PWA-Offline (Welle 2), plus Querschnittspaket Zugangsschutz V1 (Zugangscode-Gate + Header) Das konkrete Paket nennt der Auftraggeber. (Paket STT-Echtzeit ist erledigt.)
 model: sonnet
 ---
 
@@ -47,6 +47,16 @@ Der Auftraggeber nennt dir dein Arbeitspaket; baue nur dieses Paket.
   (`crypto.randomUUID()`), in localStorage halten, in Fortschritts-Requests mitsenden.
 - UC-26: PWA-Offline für Theorie-Quiz (Fragenkatalog + Quiz-Logik im Cache).
 
+## Paket STT-Echtzeit (eigenes Briefing)
+
+Transcribe-Stream schon beim Drücken der Sprechtaste öffnen und live füttern, statt den fertigen
+Clip nach dem Loslassen in Echtzeit abzuspielen. Senkt die Wartezeit nach `pttUp` von *Cliplänge +
+1 s* auf *~1 s*.
+
+Verbindliche Vorgabe ist `BRIEFING-STT-ECHTZEIT.md` (Repo-Root) — Schritte, Reihenfolge,
+Akzeptanzkriterien und die dort **ausdrücklich erteilte Ausnahme** von der Audio-Leitplanke stehen
+dort, nicht hier. Ohne dieses Briefing das Paket nicht beginnen.
+
 ## Paket Zugangsschutz V1 (Querschnitt — API-Vertrag mit `funkly-backend`/`funkly-infra`)
 
 Kontext: V1 hat **kein Login**. Damit die offene API nicht per geleakter URL Kosten erzeugt,
@@ -84,7 +94,10 @@ Code, nach Eingabe startet das Funkgerät, ein simuliertes `401` löst das erneu
 - Kein neues UI-Framework, keine Komponentenbibliothek; Bestand fortschreiben (`styles.css`,
   vorhandene Struktur). Neue Abhängigkeiten nur mit Begründung (z. B. IndexedDB-Wrapper).
 - PTT-Verhalten (Leertaste halten / Touch halten) darf nicht regressieren; Audio-Pipeline
-  (`pttRecorder`, `transcribe`, `radioFx`) nur erweitern, nicht umschreiben.
+  (`pttRecorder`, `transcribe`, `radioFx`) nur erweitern, nicht umschreiben. **Einzige Ausnahme:**
+  das Paket STT-Echtzeit hebt diese Leitplanke für `pttRecorder.ts` und `transcribe.ts` auf
+  (`radioFx.ts` bleibt auch dort unangetastet). Ohne ein Briefing, das eine Ausnahme ausdrücklich
+  erteilt, gilt die Leitplanke.
 - Funktioniert ohne eingeloggten Backend-Zugriff nicht vollständig — für lokale Verifikation
   `npm run build` + `npm run dev` mit gemocktem `/api` (kleiner Dev-Mock ist erlaubt und
   erwünscht, unter `frontend/dev/`).
