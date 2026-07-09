@@ -90,9 +90,15 @@ export class FunklyStack extends cdk.Stack {
     // ------------------------------------------------------------------
     const backendDir = path.join(__dirname, "..", "..", "backend");
 
+    // Dialog-Turn-Modell (Haiku) - per Context uebersteuerbar, falls im
+    // Ziel-Account nur ein regionales Inference-Profil verfuegbar ist
+    // (analog evalModelId, siehe README).
+    const modelId =
+      (this.node.tryGetContext("modelId") as string | undefined) ?? "anthropic.claude-haiku-4-5";
+
     // Bewertungsmodell fuer Abschluss-/Pruefungsauswertung (Sonnet) - per
     // Context uebersteuerbar, falls im Ziel-Account nur ein regionales
-    // Inference-Profil verfuegbar ist (analog MODEL_ID, siehe README).
+    // Inference-Profil verfuegbar ist (analog modelId, siehe README).
     const evalModelId =
       (this.node.tryGetContext("evalModelId") as string | undefined) ?? "anthropic.claude-sonnet-5";
 
@@ -132,7 +138,7 @@ export class FunklyStack extends cdk.Stack {
         externalModules: [], // alles bundeln (inkl. AWS SDK v3 + Anthropic SDK)
       },
       environment: {
-        MODEL_ID: "anthropic.claude-haiku-4-5",
+        MODEL_ID: modelId,
         EVAL_MODEL_ID: evalModelId,
         PROGRESS_TABLE_NAME: progressTable.tableName,
         TTS_CACHE_BUCKET_NAME: ttsCacheBucket.bucketName,

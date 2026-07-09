@@ -9,3 +9,4 @@ cdk.out/
 .DS_Store
 Thumbs.db
 *.tsbuildinfo
+scripts/deploy-prod.ps1

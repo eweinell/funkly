@@ -43,11 +43,11 @@ Mikrofon freigeben, Übung wählen, PTT (Maus oder Leertaste) halten und spreche
 
 | Stellschraube | Ort | Default |
 |---|---|---|
-| Claude-Modell (Dialog-Turns) | Lambda-Env `MODEL_ID` (infra/lib/funkly-stack.ts) | `anthropic.claude-haiku-4-5` |
+| Claude-Modell (Dialog-Turns) | Lambda-Env `MODEL_ID`; per CDK-Context `modelId` übersteuerbar | `anthropic.claude-haiku-4-5` |
 | Claude-Modell (Bewertung/Prüfungsauswertung) | Lambda-Env `EVAL_MODEL_ID`; per CDK-Context `evalModelId` übersteuerbar | `anthropic.claude-sonnet-5` |
 | TTS-Stimmen | `backend/src/turn.ts` (`VOICES`) | Amy (en-GB), Vicki (de-DE), neural |
 | STT-Sprachen | `frontend/src/audio/transcribe.ts` | en-GB / de-DE |
-| Region | AWS-Profil (`CDK_DEFAULT_REGION`) | eu-west-1 |
+| Region | Umgebungsvariable `CDK_DEFAULT_REGION` (vor `npx cdk …` setzen, z. B. `$env:CDK_DEFAULT_REGION="eu-west-1"`); ohne gesetzte Variable nimmt CDK die Default-Region aus dem AWS-Profil/SSO | eu-west-1 |
 | Fortschritt-Tabelle (UC-23) | DynamoDB `ProgressTable`, Name per Lambda-Env `PROGRESS_TABLE_NAME` | on-demand, PK `userId` (Geräte-UUID), SK `itemKey` (`<ART>#<ID>#<ISO-Zeitstempel>`) |
 | TTS-Cache (UC-25) | S3 `TtsCacheBucket`, Name per Lambda-Env `TTS_CACHE_BUCKET_NAME`; Ablauf per CDK-Context `ttsCacheExpirationDays` | 90 Tage |
 | Budget-Alarm | CDK-Context `budgetLimitEur` (Betrag) und `budgetNotificationEmail` (Empfänger, **nie hart codiert**) | 10 EUR/Monat; ohne gesetzte E-Mail-Adresse entsteht kein Budget (nur eine `cdk synth`-Warnung) |
@@ -58,9 +58,9 @@ Mikrofon freigeben, Übung wählen, PTT (Maus oder Leertaste) halten und spreche
 
 Hinweis Bedrock: Der Modellzugriff (Anthropic-Modelle) muss im Ziel-Account/Region einmalig in der
 Bedrock-Konsole freigeschaltet sein. Falls ein Modell nur über ein regionales Inference-Profil
-verfügbar ist, `MODEL_ID` bzw. `evalModelId` auf `eu.anthropic.claude-haiku-4-5` bzw.
-`eu.anthropic.claude-sonnet-5` setzen — die bestehende Bedrock-IAM-Policy deckt Inference-Profile
-mit beliebigem Namenspräfix bereits ab.
+verfügbar ist, per CDK-Context `-c modelId=eu.anthropic.claude-haiku-4-5` bzw.
+`-c evalModelId=eu.anthropic.claude-sonnet-5` setzen — die bestehende Bedrock-IAM-Policy deckt
+Inference-Profile mit beliebigem Namenspräfix bereits ab.
 
 ### Zugangsschutz-Secrets erzeugen (V1)
 

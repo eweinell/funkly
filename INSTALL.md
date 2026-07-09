@@ -95,16 +95,22 @@ deployt wird immer per CDK, nie von Hand in der Konsole.
 ### 4.1 Voraussetzungen (AWS)
 
 - **AWS-Konto** mit konfigurierten Credentials (AWS-CLI-Profil oder SSO) und Berechtigung, die
-  Ressourcen anzulegen. Region über `CDK_DEFAULT_REGION` (Default `eu-west-1`).
+  Ressourcen anzulegen. **Region** wird über die Umgebungsvariable `CDK_DEFAULT_REGION` gesteuert
+  (Default, falls ungesetzt: die Default-Region deines AWS-Profils/SSO, **nicht** automatisch
+  `eu-west-1`) — vor **jedem** `npx cdk …`-Aufruf setzen:
+  ```powershell
+  $env:CDK_DEFAULT_REGION = "eu-west-1"
+  ```
 - **Bedrock-Modellzugriff** (Anthropic-Modelle) muss im Ziel-Account/Region **einmalig in der
   Bedrock-Konsole freigeschaltet** sein. Ist ein Modell nur als regionales Inference-Profil
-  verfügbar, `MODEL_ID`/`evalModelId` entsprechend setzen (Details: [README](README.md#konfiguration)).
+  verfügbar, beim Deploy per CDK-Context `-c modelId=…`/`-c evalModelId=…` entsprechend setzen
+  (Details: [README](README.md#konfiguration)).
 - **Infra-Abhängigkeiten** installiert:
   ```powershell
   cd infra
   npm install
   ```
-- **CDK-Bootstrap** — einmalig pro Account/Region:
+- **CDK-Bootstrap** — einmalig pro Account/Region (Region wie oben per `CDK_DEFAULT_REGION` gesetzt):
   ```powershell
   npx cdk bootstrap
   ```
@@ -127,13 +133,19 @@ Erzeugung (PowerShell/Node/OpenSSL) und Hintergrund: siehe
 cd frontend
 npm run build
 
-# 2. Stack deployen (Context-Werte per `-c`; eigene Secrets aus 4.2 einsetzen)
+# 2. Stack deployen (Region + Context-Werte; eigene Secrets aus 4.2 einsetzen)
 cd ../infra
+$env:CDK_DEFAULT_REGION = "eu-west-1"
 npx cdk deploy `
   -c accessCode=<dein-code> `
   -c originSecret=<dein-secret> `
-  -c budgetNotificationEmail=you@example.com -c budgetLimitEur=15
+  -c budgetNotificationEmail=you@example.com -c budgetLimitEur=15 `
+  -c modelId=eu.anthropic.claude-haiku-4-5 `
+  -c evalModelId=eu.anthropic.claude-sonnet-5
 ```
+
+> `-c modelId=…`/`-c evalModelId=…` nur setzen, wenn im Ziel-Account/Region ein regionales
+> Inference-Profil statt des Foundation-Models nötig ist (siehe 4.1).
 
 Die vollständige Liste der Context-/Env-Stellschrauben (Modelle, TTS-Cache, Throttling, Budget …)
 steht in der [README-Konfigurationstabelle](README.md#konfiguration).
