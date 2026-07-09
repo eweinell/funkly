@@ -1,0 +1,158 @@
+/* Handmikrofon IC-M330 — komplette Fläche ist PTT-Hot-Region. */
+
+.wrap {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+}
+
+.body {
+  position: relative;
+  width: 132px;
+  padding: 16px 14px 18px 20px;
+  border-radius: 26px 26px 20px 20px;
+  cursor: pointer;
+  user-select: none;
+  touch-action: none;
+  background: linear-gradient(165deg, #2b3138 0%, #171b20 40%, #0a0c0f 100%);
+  border: 1px solid #05070a;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset -4px -6px 12px rgba(0, 0, 0, 0.55),
+    0 14px 28px rgba(0, 0, 0, 0.55);
+  transition: box-shadow 120ms ease;
+}
+.body:hover {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    inset -4px -6px 12px rgba(0, 0, 0, 0.55),
+    0 0 0 2px rgba(232, 132, 44, 0.35),
+    0 14px 28px rgba(0, 0, 0, 0.55);
+}
+.body:focus-visible {
+  outline: 2px solid var(--ptt);
+  outline-offset: 3px;
+}
+/* Beim Senden glimmt das Mikro signal-orange (Zustand kommt bei Verdrahtung). */
+.body.tx {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.12),
+    0 0 0 3px var(--ptt),
+    0 0 24px rgba(232, 132, 44, 0.55),
+    0 14px 28px rgba(0, 0, 0, 0.55);
+}
+
+/* echte PTT-Taste an der linken Seite (ragt aus dem Gehäuse) */
+.pttButton {
+  position: absolute;
+  left: -9px;
+  top: 34px;
+  width: 14px;
+  height: 58px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, #31383f, #14181c 70%);
+  border: 1px solid #05070a;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), -2px 3px 6px rgba(0, 0, 0, 0.5);
+}
+.pttButton i {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) rotate(-90deg);
+  font-family: var(--font-label);
+  font-style: normal;
+  font-size: 7px;
+  letter-spacing: 0.2em;
+  color: var(--text-dim);
+}
+.body:active .pttButton { background: linear-gradient(90deg, #22282e, #0e1114 70%); }
+
+.grille {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 6px 8px;
+  border-radius: 12px;
+  background: #0a0c0f;
+  border: 1px solid #04060866;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.grille span {
+  height: 5px;
+  border-radius: 3px;
+  background: #000;
+  border-top: 1px solid #2b3238;
+}
+
+.logo {
+  display: block;
+  margin: 8px 2px 10px;
+  text-align: right;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: #aeb7bf;
+}
+.logo i { font-style: normal; color: #e33; }
+
+/* Tastenfeld unten wie beim Original-Handmikro:
+   HI/LO oben links, CH▲▼ mittig, 16/C unten rechts. */
+.keys {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto auto auto;
+  gap: 6px;
+  align-items: center;
+}
+.chPair {
+  grid-column: 1 / -1;
+  grid-row: 2;
+  display: flex;
+  gap: 6px;
+  justify-content: center;
+}
+.sideKey {
+  grid-column: 1;
+  grid-row: 1;
+  justify-self: start;
+  min-width: 46px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #3a424a;
+  background: linear-gradient(180deg, #262c32, #101317);
+  color: #c4ccd3;
+  font-family: var(--font-label);
+  font-size: 8px;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.sideKey.right { grid-column: 2; grid-row: 3; justify-self: end; }
+.chKey {
+  width: 34px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid #3a424a;
+  background: linear-gradient(180deg, #2a3036, #12151a);
+  color: #c4ccd3;
+  font-size: 10px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+.sideKey:active,
+.chKey:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); }
+
+.cord {
+  width: 90px;
+  height: 46px;
+  margin-left: -6px;
+  margin-bottom: 4px;
+  flex: none;
+}
+
+@media (max-width: 900px) {
+  .body { width: 116px; }
+  .cord { display: none; }
+}

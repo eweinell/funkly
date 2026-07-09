@@ -1,0 +1,21 @@
+/* Skin-Rahmen: Mikrofon hängt separat über der Fronteinheit (wie am Schott). */
+
+.skin {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.micRow {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0 26px 0 0;
+  /* Mikro überlappt die Oberkante des Geräts leicht — hängt "davor". */
+  margin-bottom: -14px;
+  position: relative;
+  z-index: 1;
+}
+
+@media (max-width: 900px) {
+  .micRow { padding-right: 12px; margin-bottom: -8px; }
+}

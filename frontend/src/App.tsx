@@ -3,6 +3,7 @@ import { Language } from "./api";
 import { useSession } from "./state/SessionContext";
 import { t } from "./i18n";
 import { RadioPanel } from "./components/radio/RadioPanel";
+import { IcM330Skin } from "./components/radio/skins/icm330";
 import { ScenarioPicker } from "./components/training/ScenarioPicker";
 import { Briefing } from "./components/training/Briefing";
 import { PhaseStepper } from "./components/training/PhaseStepper";
@@ -42,7 +43,9 @@ export default function App() {
       </header>
 
       <main className="layout">
-        <RadioPanel />
+        {/* Layout-Vorschau des unverdrahteten IC-M330-Skins (?skin=icm330);
+            Tasten loggen nur in die Konsole. Umschalter kommt mit der Verdrahtung. */}
+        {new URLSearchParams(window.location.search).get("skin") === "icm330" ? <IcM330Skin /> : <RadioPanel />}
 
         <section className={styles.panel}>
           {!scenario && (

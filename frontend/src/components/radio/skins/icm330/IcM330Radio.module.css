@@ -1,0 +1,274 @@
+/* ==========================================================================
+   IC-M330 Fronteinheit — Hardware-Replikat.
+   Skin-lokale Farben: Gehäuse tiefschwarz-anthrazit, Tasten dunkel mit
+   cremefarbener Kontur (wie beim Original), 16/C blau, DISTRESS rot.
+   ========================================================================== */
+
+.radio {
+  --m330-body: #16191d;
+  --m330-body-hi: #262b31;
+  --m330-body-lo: #08090b;
+  --m330-key: #1d2126;
+  --m330-key-edge: #e8e0c8; /* cremefarbene Tastenkontur */
+  --m330-blue: #2f7fd4;
+  position: relative;
+  padding: 0 18px;
+}
+
+/* Halterungsknäufe der Einbaubügel links/rechts */
+.bracketKnob {
+  position: absolute;
+  top: 44%;
+  width: 26px;
+  height: 56px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #05060714, #2a3138, #0a0d10);
+  border: 1px solid #05060a;
+  box-shadow: inset 0 2px 3px rgba(255, 255, 255, 0.08), 0 4px 10px rgba(0, 0, 0, 0.6);
+}
+.bracketKnob.left { left: 0; }
+.bracketKnob.right { right: 0; }
+
+.face {
+  position: relative;
+  padding: 12px 16px 16px;
+  border-radius: 12px;
+  background: linear-gradient(178deg, var(--m330-body-hi) 0%, var(--m330-body) 22%, var(--m330-body-lo) 100%);
+  border: 1px solid #2c3339;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -3px 8px rgba(0, 0, 0, 0.7),
+    0 18px 40px rgba(0, 0, 0, 0.55);
+}
+
+/* --- Kopfzeile --- */
+.brandRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 0 2px 8px;
+}
+.logo {
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.06em;
+  color: #dfe5ea;
+}
+.logo i { font-style: normal; color: #e33; margin-right: 1px; }
+.model {
+  font-family: var(--font-label);
+  font-size: 10px;
+  letter-spacing: 0.14em;
+  color: var(--text-dim);
+}
+.model b { color: #cfd6dc; margin-left: 4px; }
+
+/* --- Mittelteil: Grill | LCD | Tastenfeld --- */
+.middle {
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: stretch;
+}
+
+.grille {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  padding: 6px 4px;
+  border-radius: 6px;
+  background: linear-gradient(180deg, #101317, #0a0c0f);
+  border: 1px solid #05070a;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8);
+}
+.grille span {
+  height: 7px;
+  border-radius: 3px;
+  background: linear-gradient(180deg, #04050700 20%, #000 60%);
+  border-top: 1px solid #2b3238;
+  border-bottom: 1px solid #000;
+}
+
+.lcdWrap { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+
+.softkeys {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  padding: 0 2px;
+}
+.softkey {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 24px;
+  border-radius: 12px;
+  border: 2px solid var(--m330-key-edge);
+  background: linear-gradient(180deg, #2a3036, var(--m330-key) 60%, #0e1114);
+  color: var(--m330-key-edge);
+  cursor: pointer;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.softkey span {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--m330-key-edge);
+}
+.softkey:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); }
+
+/* --- Navigationsfeld rechts --- */
+.keypad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 2px 0;
+}
+.navRow { display: flex; gap: 7px; }
+
+.key {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 37px;
+  height: 31px;
+  border-radius: 9px;
+  border: 2px solid var(--m330-key-edge);
+  background: linear-gradient(180deg, #2a3036, var(--m330-key) 60%, #0e1114);
+  color: var(--m330-key-edge);
+  font-family: var(--font-label);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 3px 5px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.key:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.55); }
+.key em { font-style: normal; font-size: 8px; letter-spacing: 0.12em; }
+.key i { font-style: normal; font-size: 10px; }
+.chKey { gap: 1px; }
+.entKey { font-size: 11px; letter-spacing: 0.04em; }
+.smallText { font-size: 9px; letter-spacing: 0.06em; }
+
+/* --- Fußzeile: Mikrofonbuchse, DISTRESS, 16/C + Drehknopf --- */
+.bottomRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 14px;
+}
+
+.micSocket {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #2c343b, #0b0e11 70%);
+  border: 3px solid #1c2126;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.9);
+}
+
+/* DISTRESS: rote, halbtransparente Klappe; geöffnet roter Halteknopf */
+.distress { position: relative; display: flex; align-items: center; gap: 4px; }
+.flap,
+.distressBtn {
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 5px;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  cursor: pointer;
+}
+.flap {
+  color: #ffd7d4;
+  background: linear-gradient(180deg, rgba(227, 60, 50, 0.85), rgba(140, 22, 18, 0.9));
+  border: 1px solid #ff6a5e66;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 3px 6px rgba(0, 0, 0, 0.5);
+}
+.distressBtn {
+  color: #fff;
+  background: radial-gradient(circle at 50% 30%, var(--alarm), var(--distress) 70%);
+  border: 2px solid var(--distress-deep);
+  box-shadow: 0 0 12px rgba(255, 77, 61, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+.distressBtn:active { transform: translateY(1px); }
+.flapClose {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1px solid #444;
+  background: #16191d;
+  color: var(--text-dim);
+  font-size: 9px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+/* 16/C + VOL/SQL/PWR */
+.dialCluster { display: flex; align-items: center; gap: 10px; margin-left: auto; }
+
+.sixteenC {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 3px solid var(--m330-blue);
+  background: radial-gradient(circle at 40% 30%, #262c33, #0d1013 75%);
+  color: #cfe4f7;
+  font-family: var(--font-label);
+  font-weight: 700;
+  font-size: 10px;
+  cursor: pointer;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+.sixteenC:active { transform: translateY(1px); }
+
+.dialLabels {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  font-family: var(--font-label);
+  font-size: 8px;
+  letter-spacing: 0.1em;
+  color: var(--text-dim);
+}
+.pwr { padding: 0 3px; border: 1px solid var(--text-dim); border-radius: 2px; }
+
+.dial {
+  position: relative;
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border: 2px solid #05070a;
+  cursor: pointer;
+  background:
+    repeating-conic-gradient(#22282e 0deg 9deg, #0c0f12 9deg 18deg);
+  box-shadow:
+    inset 0 0 0 8px #14181c,
+    inset 0 2px 4px rgba(255, 255, 255, 0.1),
+    0 5px 12px rgba(0, 0, 0, 0.65);
+}
+.dialMark {
+  position: absolute;
+  top: 9px;
+  left: 50%;
+  width: 3px;
+  height: 12px;
+  margin-left: -1.5px;
+  border-radius: 2px;
+  background: #cfd6dc;
+}
+.dial:active { box-shadow: inset 0 0 0 8px #101418, inset 0 3px 6px rgba(0, 0, 0, 0.6), 0 2px 6px rgba(0, 0, 0, 0.65); }
+
+@media (max-width: 900px) {
+  .radio { padding: 0 10px; }
+  .middle { grid-template-columns: 40px minmax(0, 1fr) auto; gap: 8px; }
+  .softkeys { gap: 6px; padding: 0; }
+  .key { width: 34px; height: 28px; }
+  .bottomRow { gap: 8px; }
+  .dial { width: 48px; height: 48px; }
+}
