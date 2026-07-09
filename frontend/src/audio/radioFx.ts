@@ -86,8 +86,19 @@ export async function playRadio(audioBase64: string, opts: RadioFxOptions = {}):
   noiseGain.gain.setValueAtTime(noiseLevel, t0 + buffer.duration);
   noiseGain.gain.linearRampToValueAtTime(noiseLevel * 6 + 0.02, t0 + buffer.duration + 0.05);
   noiseGain.gain.setValueAtTime(0, t0 + buffer.duration + tailSeconds);
-  noiseSrc.connect(highpass);
-  noiseSrc.connect(noiseGain).connect(ac.destination);
+
+  // Eigene Bandpass-Kette fuer das Rauschen: es soll wie die Sprache auf den
+  // Funkkanal begrenzt klingen, aber NICHT durch den Saettigungs-Shaper der
+  // Sprachkette laufen - und vor allem nie an noiseGain vorbei. Wird noiseSrc
+  // direkt an `highpass` gehaengt, umgeht das ungedaempfte Rauschen (+-1.0)
+  // seinen Pegelregler und uebertoent die Stimme.
+  const noiseHigh = ac.createBiquadFilter();
+  noiseHigh.type = "highpass";
+  noiseHigh.frequency.value = 300;
+  const noiseLow = ac.createBiquadFilter();
+  noiseLow.type = "lowpass";
+  noiseLow.frequency.value = 3000;
+  noiseSrc.connect(noiseGain).connect(noiseHigh).connect(noiseLow).connect(ac.destination);
 
   return new Promise<void>((resolve) => {
     const done = () => {

@@ -45,7 +45,10 @@ function toFrames(chunks: Int16Array[], frameBytes = 3200): Uint8Array[] {
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-/** ~1 s Stille (10 Frames a 100 ms) als Nachlauf hinter dem Clip. */
+/** Audiodauer eines Frames (3200 Bytes PCM16 @ 16 kHz). */
+const FRAME_MS = 100;
+
+/** ~1 s Stille als Nachlauf hinter dem Clip. */
 const TAIL_SILENCE_FRAMES = 10;
 
 /** Aufgenommenen PTT-Clip zu Amazon Transcribe streamen, finales Transkript zurueckgeben. */
@@ -55,10 +58,11 @@ export async function transcribeClip(chunks: Int16Array[], language: Language): 
   const languageCode = language === "de" ? "de-DE" : "en-GB";
   console.debug("[stt] senden", { frames: frames.length, bytes: frames.reduce((n, f) => n + f.length, 0), languageCode });
 
-  // Transcribe erwartet einen Echtzeit-Strom. Wird der komplette Clip auf einmal
-  // hineingekippt und sofort das Stream-Ende signalisiert, schliesst der Service
-  // die Session teils, bevor ein finales Ergebnis (IsPartial=false) entsteht.
-  // Deshalb die Frames gepaced senden (~4x Echtzeit) statt in einem Rutsch.
+  // Transcribe verarbeitet den Strom in ECHTZEIT (Wanduhr), nicht so schnell wie
+  // er hereinkommt. Frames schneller als Echtzeit zu senden, staut sie nur auf:
+  // beim Stream-Ende verwirft der Service den unverarbeiteten Rest. Ein 7-s-Clip
+  // in 4x Tempo lieferte so nur die ersten ~1-2 s als Transkript. Deshalb genau
+  // FRAME_MS pro Frame warten - langsamer geht nicht, schneller verliert Text.
   //
   // Das Ende einer Aeusserung erkennt Transcribe an nachfolgender Stille. Endet
   // der Strom direkt hinter dem letzten Sprach-Frame, bleibt das letzte Segment
@@ -67,11 +71,11 @@ export async function transcribeClip(chunks: Int16Array[], language: Language): 
   async function* audioStream() {
     for (const frame of frames) {
       yield { AudioEvent: { AudioChunk: frame } };
-      await sleep(25);
+      await sleep(FRAME_MS);
     }
     for (let i = 0; i < TAIL_SILENCE_FRAMES; i++) {
       yield { AudioEvent: { AudioChunk: silence } };
-      await sleep(25);
+      await sleep(FRAME_MS);
     }
   }
 
