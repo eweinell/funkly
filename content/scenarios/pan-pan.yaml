@@ -15,17 +15,22 @@ title:
 
 briefing:
   en: >-
-    Engine failure — you are drifting off Fehmarn towards the shipping lane, but
-    there is no immediate danger to life. This is an urgency situation, not a
-    distress. Transmit a PAN PAN message on channel 16: PAN PAN x3, address, THIS
-    IS vessel x3, callsign/MMSI, position, nature of urgency, assistance
-    required, OVER. Urgency traffic is in English.
+    Engine failure — you are drifting north off Fehmarn towards the shipping
+    lane, but there is no immediate danger to life. There are three persons on
+    board and your position is on the GPS readout below. The nearest harbour is
+    Burgstaaken on Fehmarn; you need a tow there. This is an urgency situation,
+    not a distress. Transmit a PAN PAN message on channel 16: PAN PAN x3,
+    address, THIS IS vessel x3, callsign/MMSI, position, nature of urgency,
+    assistance required, OVER. Urgency traffic is in English.
   de: >-
-    Maschinenausfall — Sie treiben vor Fehmarn Richtung Schifffahrtsweg, aber es
-    besteht keine unmittelbare Lebensgefahr. Das ist ein Dringlichkeitsfall, kein
-    Notfall. Setzen Sie eine PAN-PAN-Meldung auf Kanal 16 ab: PAN PAN x3, Anrede,
-    THIS IS Schiff x3, Rufzeichen/MMSI, Position, Art der Dringlichkeit, erbetene
-    Hilfe, OVER. Dringlichkeitsverkehr auf Englisch.
+    Maschinenausfall — Sie treiben vor Fehmarn nach Norden Richtung
+    Schifffahrtsweg, aber es besteht keine unmittelbare Lebensgefahr. Es sind
+    drei Personen an Bord, Ihre Position steht auf der GPS-Anzeige unten. Der
+    naechste Hafen ist Burgstaaken auf Fehmarn; dorthin brauchen Sie einen
+    Schlepper. Das ist ein Dringlichkeitsfall, kein Notfall. Setzen Sie eine
+    PAN-PAN-Meldung auf Kanal 16 ab: PAN PAN x3, Anrede, THIS IS Schiff x3,
+    Rufzeichen/MMSI, Position, Art der Dringlichkeit, erbetene Hilfe, OVER.
+    Dringlichkeitsverkehr auf Englisch.
 
 stations:
   - id: bremen-rescue
@@ -69,8 +74,8 @@ phases:
       en: "Start with PAN PAN three times, address All Stations or Bremen Rescue, THIS IS, then your vessel name three times and callsign."
       de: "Beginne mit PAN PAN dreimal, richte an All Stations oder Bremen Rescue, THIS IS, dann Schiffsname dreimal und Rufzeichen."
     sampleSolution:
-      en: "PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One, over."
-      de: "PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One, over."
+      en: "PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Lima Four Five One One, over."
+      de: "PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Lima Four Five One One, over."
 
   - id: urgency-message
     expect: message
@@ -149,7 +154,7 @@ rubric:
 sampleSolution:
   en: >-
     PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS
-    sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One,
+    sailing yacht Bluebird, Bluebird, Bluebird, Delta Lima Four Five One One,
     over. — My position is 54 degrees 32 minutes north, 011 degrees 05 minutes
     east. Engine failure, drifting north towards the shipping lane, three persons
     on board, no immediate danger. I require a tow to Burgstaaken. Over. —
@@ -157,7 +162,7 @@ sampleSolution:
     this is Bluebird, roger, standing by on channel one-six, over.
   de: >-
     PAN PAN, PAN PAN, PAN PAN. All stations, all stations, all stations, THIS IS
-    sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One,
+    sailing yacht Bluebird, Bluebird, Bluebird, Delta Lima Four Five One One,
     over. — My position is 54 degrees 32 minutes north, 011 degrees 05 minutes
     east. Engine failure, drifting north towards the shipping lane, three persons
     on board, no immediate danger. I require a tow to Burgstaaken. Over. —

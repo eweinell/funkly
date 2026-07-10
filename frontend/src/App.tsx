@@ -15,7 +15,7 @@ import styles from "./App.module.css";
 
 export default function App() {
   const { state, language, setLanguage, panelMode, setPanelMode, startScenario, endSession } = useSession();
-  const { scenario, scenarios, log, done, phase } = state;
+  const { scenario, scenarios, setup, log, done, phase } = state;
   const busy = state.status !== "idle";
   const strings = t(language);
 
@@ -56,6 +56,7 @@ export default function App() {
             <>
               <Briefing
                 scenario={scenario}
+                setup={setup}
                 language={language}
                 panelMode={panelMode}
                 onPanelModeChange={setPanelMode}

@@ -50,13 +50,18 @@ export type PhaseExpect =
   | "translation"
   | "free";
 
+/** Sollkanal einer Phase: fester Kanal, oder der Sentinel `"working"` fuer den
+ *  je Session gezogenen Arbeitskanal (`SessionSetup.workingChannel`). */
+export const WORKING_CHANNEL = "working";
+export type ExpectedChannel = Channel | typeof WORKING_CHANNEL;
+
 export interface Phase {
   id: string;
   expect: PhaseExpect;
   label: LocalizedText;
   station?: string;
   direction?: string;
-  expectedChannel?: Channel;
+  expectedChannel?: ExpectedChannel;
   hints?: LocalizedText;
   sampleSolution?: LocalizedText;
   optional?: boolean;
@@ -142,6 +147,8 @@ export interface SessionSetup {
   callsign: string;
   mmsi: string;
   position: string;
+  /** Gezogener Arbeitskanal; loest `expectedChannel: "working"` auf. */
+  workingChannel?: Channel;
 }
 
 // -- Laden des Content-Pakets --
@@ -192,7 +199,8 @@ export function randomSetup(scenario: Scenario, language: Language): SessionSetu
   const max = Math.pow(10, digits) - 1;
   const mmsi = mmsiSpec.midPrefix + String(Math.floor(Math.random() * (max + 1))).padStart(digits, "0");
   const positionText = pick(setup?.positionPool?.length ? setup.positionPool : [FALLBACK_POSITION]);
-  return { vessel, callsign, mmsi, position: positionText[language] };
+  const workingChannel = setup?.workingChannelPool?.length ? pick(setup.workingChannelPool) : undefined;
+  return { vessel, callsign, mmsi, position: positionText[language], workingChannel };
 }
 
 // -- Phasen-Tracking (Engine ist massgeblich, nicht das Modell) --
@@ -242,16 +250,87 @@ function normalizeChannel(channel: Channel): string {
   return String(channel).trim().toUpperCase();
 }
 
-export function checkChannel(phase: Phase, channel: Channel): ChannelCheck {
+/** Sollkanal der Phase als konkreter Kanal. Der Sentinel `"working"` zieht den je
+ *  Session gezogenen Arbeitskanal; ohne Setup (oder ohne Arbeitskanal-Pool im
+ *  Szenario) bleibt die Phase kanalfrei, statt gegen den String zu vergleichen. */
+export function resolveExpectedChannel(phase: Phase, setup?: SessionSetup): Channel | undefined {
+  if (phase.expectedChannel === undefined) return undefined;
+  if (phase.expectedChannel === WORKING_CHANNEL) return setup?.workingChannel;
+  return phase.expectedChannel;
+}
+
+/**
+ * "Frueher Wechsel": In einer `switch-channel`-Phase wird der Kanalwechsel gerade
+ * verhandelt. Der Trainee darf die Quittung noch auf dem Anrufkanal geben ODER
+ * bereits auf den Arbeitskanal gedreht haben - beides bekommt eine Antwort.
+ *
+ * Sonst sitzt er fest: ein Turn auf falschem Kanal bekommt keine Antwort und
+ * schiebt die Phase nicht weiter, d. h. wer erst dreht und dann bestaetigt,
+ * kaeme aus der Phase nie wieder heraus. Die fehlende Quittung auf dem
+ * Anrufkanal ist deshalb ein BEWERTUNGSfehler (Kanaldisziplin), keine
+ * Funkstille - der Dialog-Prompt bekommt dafuer einen expliziten Hinweis.
+ */
+export function isEarlySwitch(phase: Phase, channel: Channel, setup?: SessionSetup): boolean {
+  if (phase.expect !== "switch-channel") return false;
+  const expected = resolveExpectedChannel(phase, setup);
+  const working = setup?.workingChannel;
+  if (expected === undefined || working === undefined) return false;
+  // Phase erwartet ohnehin schon den Arbeitskanal -> nichts zu tolerieren.
+  if (normalizeChannel(expected) === normalizeChannel(working)) return false;
+  return normalizeChannel(channel) === normalizeChannel(working);
+}
+
+export function checkChannel(phase: Phase, channel: Channel, setup?: SessionSetup): ChannelCheck {
   const normalized = normalizeChannel(channel);
   if (normalized === "70" && !DSC_PHASE_TYPES.has(phase.expect)) {
     return { ok: false, reason: "channel-70-voice-blocked" };
   }
-  if (phase.expectedChannel === undefined) return { ok: true };
-  if (normalizeChannel(phase.expectedChannel) !== normalized) {
+  if (isEarlySwitch(phase, channel, setup)) return { ok: true };
+  const expected = resolveExpectedChannel(phase, setup);
+  if (expected === undefined) return { ok: true };
+  if (normalizeChannel(expected) !== normalized) {
     return { ok: false, reason: "wrong-channel" };
   }
   return { ok: true };
+}
+
+// -- Arbeitskanal-Platzhalter im Content --
+//
+// Der Arbeitskanal wird je Session aus dem Pool gezogen, die Station nennt ihn
+// aber im Dialog. Stand ein fester Beispielkanal im Direction-/Musterloesungs-
+// text ("change to channel two-six"), plapperte das Modell diesen nach, statt
+// den Kanal aus Block C zu verwenden - der Trainee wechselte dann auf einen
+// Kanal, auf dem `checkChannel` nicht antwortet. Deshalb steht im Content nur
+// noch ein Platzhalter, den die Engine mit dem tatsaechlichen Kanal fuellt.
+
+const SPOKEN_DIGITS: Record<Language, string[]> = {
+  en: ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine"],
+  de: ["null", "eins", "zwei", "drei", "vier", "fuenf", "sechs", "sieben", "acht", "neun"],
+};
+
+/** Kanalnummer ziffernweise, wie sie im Sprechfunk gesprochen wird: 26 -> "two-six". */
+export function spokenChannel(channel: Channel, language: Language = "en"): string {
+  const raw = String(channel).trim();
+  if (!/^\d+$/.test(raw)) return raw;
+  return raw
+    .split("")
+    .map((d) => SPOKEN_DIGITS[language][Number(d)])
+    .join("-");
+}
+
+/** Ersetzt `{{workingChannel}}` / `{{workingChannelSpoken}}` in Content-Texten.
+ *  Ohne gezogenen Arbeitskanal bleibt eine neutrale Umschreibung stehen, damit
+ *  weder Modell noch Trainee einen rohen Platzhalter zu sehen bekommt. */
+export function renderChannelTemplate(text: string, workingChannel?: Channel, language: Language = "en"): string {
+  const numeric =
+    workingChannel !== undefined ? String(workingChannel) : language === "de" ? "dem Arbeitskanal" : "the working channel";
+  const spoken =
+    workingChannel !== undefined
+      ? spokenChannel(workingChannel, language)
+      : language === "de"
+        ? "dem Arbeitskanal"
+        : "the working channel";
+  return text.replace(/\{\{workingChannelSpoken\}\}/g, spoken).replace(/\{\{workingChannel\}\}/g, numeric);
 }
 
 // -- Rubric-Aggregation (Vertrag: Scores je Rubric-ID, Gesamtscore server-seitig

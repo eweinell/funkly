@@ -51,9 +51,13 @@ function semanticChecks(s) {
   const errors = [];
   const stationIds = new Set((s.stations ?? []).map((st) => st.id));
   const phaseIds = new Set((s.phases ?? []).map((p) => p.id));
+  const hasWorkingChannelPool = (s.setup?.workingChannelPool ?? []).length > 0;
   for (const p of s.phases ?? []) {
     if (p.station && !stationIds.has(p.station)) {
       errors.push(`phase '${p.id}' verweist auf unbekannte station '${p.station}'`);
+    }
+    if (p.expectedChannel === "working" && !hasWorkingChannelPool) {
+      errors.push(`phase '${p.id}' erwartet den Arbeitskanal, aber setup.workingChannelPool fehlt`);
     }
   }
   for (const r of s.rubric ?? []) {

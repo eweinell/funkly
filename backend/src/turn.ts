@@ -11,6 +11,8 @@ import {
   getScenario,
   localize,
   reconcileRubric,
+  renderChannelTemplate,
+  resolveExpectedChannel,
   Phase,
   Scenario,
   Station,
@@ -33,7 +35,7 @@ export async function handleTurn(req: TurnRequestV2): Promise<TurnResponseV2> {
 
   // Kanal-Mechanik (UI-SPEZIFIKATION §1): bei Abweichung KEIN Bedrock-Call,
   // sondern eine billige "no reply"-Response direkt aus der Engine.
-  const channelCheck = checkChannel(phase, req.channel);
+  const channelCheck = checkChannel(phase, req.channel, req.setup);
   if (!channelCheck.ok) {
     return buildNoReplyResponse(scenario, phase, index, defaultStation, channelCheck.reason, req);
   }
@@ -70,7 +72,7 @@ function buildNoReplyResponse(
   req: TurnRequestV2
 ): TurnResponseV2 {
   const completedPhaseIds = scenario.phases.slice(0, index).map((p) => p.id);
-  const coaching = req.mode === "training" ? coachingHintFor(phase, reason, req.language) : undefined;
+  const coaching = req.mode === "training" ? coachingHintFor(phase, reason, req.language, req.setup) : undefined;
   return {
     reply: "",
     stationId: station.id,
@@ -91,14 +93,16 @@ function buildNoReplyResponse(
 function coachingHintFor(
   phase: Phase,
   reason: "wrong-channel" | "channel-70-voice-blocked",
-  language: TurnRequestV2["language"]
+  language: TurnRequestV2["language"],
+  setup: TurnRequestV2["setup"]
 ): string {
   if (reason === "channel-70-voice-blocked") {
     return language === "de"
       ? "Kanal 70 ist nur fuer DSC reserviert - fuer Sprechfunk einen anderen Kanal waehlen."
       : "Channel 70 is DSC-only - select a different channel for voice traffic.";
   }
-  const ch = phase.expectedChannel !== undefined ? String(phase.expectedChannel) : "?";
+  const expected = resolveExpectedChannel(phase, setup);
+  const ch = expected !== undefined ? String(expected) : "?";
   return language === "de" ? `Die Gegenstelle wartet auf Kanal ${ch}.` : `The station is waiting on channel ${ch}.`;
 }
 
@@ -161,7 +165,9 @@ function parseModelTurn(text: string, scenario: Scenario, req: TurnRequestV2): P
 
   const newPhase = scenario.phases[advance.newIndex];
   const coaching =
-    req.mode === "training" && !advance.scenarioDone && newPhase.hints ? localize(newPhase.hints, req.language) : undefined;
+    req.mode === "training" && !advance.scenarioDone && newPhase.hints
+      ? renderChannelTemplate(localize(newPhase.hints, req.language), req.setup?.workingChannel, req.language)
+      : undefined;
 
   return {
     reply,

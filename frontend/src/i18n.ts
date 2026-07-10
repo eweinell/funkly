@@ -3,6 +3,7 @@ import type { Language } from "./api";
 export interface UiStrings {
   pttHint: string;
   pick: string;
+  ownPosition: string;
   newSession: string;
   done: string;
   noCopy: string;
@@ -47,6 +48,7 @@ export const UI: Record<Language, UiStrings> = {
   en: {
     pttHint: "hold to transmit — or hold [SPACE]",
     pick: "SELECT EXERCISE",
+    ownPosition: "GPS · own position",
     newSession: "NEW EXERCISE",
     done: "EXERCISE COMPLETE",
     noCopy: "Nothing received — hold PTT while speaking.",
@@ -92,6 +94,7 @@ export const UI: Record<Language, UiStrings> = {
   de: {
     pttHint: "zum Senden halten — oder [LEERTASTE] halten",
     pick: "ÜBUNG WÄHLEN",
+    ownPosition: "GPS · eigene Position",
     newSession: "NEUE ÜBUNG",
     done: "ÜBUNG ABGESCHLOSSEN",
     noCopy: "Nichts empfangen — PTT beim Sprechen gedrückt halten.",

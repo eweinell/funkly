@@ -225,8 +225,8 @@
           "type": "string"
         },
         "expectedChannel": {
-          "description": "Sollkanal dieser Phase (UI-SPEZIFIKATION §1). Auf falschem Kanal antwortet die Gegenstelle nicht. Weglassen = kein Kanalzwang in dieser Phase.",
-          "$ref": "#/$defs/channel"
+          "description": "Sollkanal dieser Phase (UI-SPEZIFIKATION §1). Auf falschem Kanal antwortet die Gegenstelle nicht. Weglassen = kein Kanalzwang in dieser Phase. Der Sentinel 'working' meint den je Session aus setup.workingChannelPool gezogenen Arbeitskanal.",
+          "oneOf": [{ "$ref": "#/$defs/channel" }, { "const": "working" }]
         },
         "hints": {
           "description": "Coaching-Zeile 'Als Naechstes: ...' fuer den Trainingsmodus (UI-SPEZIFIKATION §3), zweisprachig.",

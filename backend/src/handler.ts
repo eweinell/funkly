@@ -49,6 +49,15 @@ export async function handler(event: APIGatewayProxyEventV2): Promise<APIGateway
       const language = body.language === "de" ? "de" : "en";
       const scenario = (requestedId && getScenario(requestedId)) ?? listScenarios()[0];
       if (!scenario) return json(500, { error: "no scenarios loaded" });
+      // Der Fallback liefert die Pools des ERSTEN Szenarios - Arbeitskanal und
+      // Position passen dann nicht zur Uebung. Stillschweigend war das lange
+      // unsichtbar, daher hier laut.
+      if (scenario.id !== requestedId) {
+        console.warn("session setup drawn from fallback scenario", {
+          requestedId: requestedId ?? "(none)",
+          usedScenarioId: scenario.id,
+        });
+      }
       return json(200, { setup: randomSetup(scenario, language) });
     }
 

@@ -17,7 +17,7 @@ import { createServer } from "node:http";
 
 const PORT = Number(process.argv[2] ?? process.env.MOCK_PORT ?? 8787);
 
-/** @typedef {{id:string, expect:string, label:{en:string,de:string}, expectedChannel?:number, hints?:{en:string,de:string}}} MockPhase */
+/** @typedef {{id:string, expect:string, label:{en:string,de:string}, expectedChannel?:number|"working", hints?:{en:string,de:string}}} MockPhase */
 
 const SCENARIOS = [
   {
@@ -143,7 +143,10 @@ function handleTurn(body) {
   const phase = phases[currentIndex] ?? phases[0];
 
   const channelStr = String(body.channel);
-  if (phase.expectedChannel !== undefined && channelStr !== String(phase.expectedChannel)) {
+  // "working" = der je Session gezogene Arbeitskanal (siehe backend/src/scenarios.ts).
+  const expectedChannel =
+    phase.expectedChannel === "working" ? body.setup?.workingChannel : phase.expectedChannel;
+  if (expectedChannel !== undefined && channelStr !== String(expectedChannel)) {
     return {
       status: 200,
       body: {
@@ -214,6 +217,7 @@ function randomSetup() {
     callsign: pick(callsigns),
     mmsi: "211" + String(Math.floor(100000 + Math.random() * 899999)),
     position: "54 degrees 32 minutes north, 011 degrees 05 minutes east",
+    workingChannel: pick([24, 25, 26, 27, 28]),
   };
 }
 

@@ -93,6 +93,91 @@ step("checkChannel: Kanal 70 sperrt Sprechfunk ausser bei DSC-Phasentypen", () =
   assert.equal(allowed.ok, true);
 });
 
+step("checkChannel: 'working' loest gegen den Arbeitskanal der Session auf", () => {
+  const phase = { id: "p", expect: "message", label: { en: "x", de: "x" }, expectedChannel: "working" };
+  const setup = { vessel: "BLUEBIRD", callsign: "DL4511", mmsi: "211423658", position: "x", workingChannel: 26 };
+
+  assert.equal(scenarios.resolveExpectedChannel(phase, setup), 26);
+  assert.equal(scenarios.checkChannel(phase, 26, setup).ok, true);
+
+  const wrong = scenarios.checkChannel(phase, 24, setup);
+  assert.equal(wrong.ok, false);
+  assert.equal(wrong.reason, "wrong-channel");
+
+  // Ohne Arbeitskanal (Szenario ohne Pool) darf die Phase nicht gegen den
+  // Sentinel-String vergleichen, sonst antwortet die Station nie.
+  assert.equal(scenarios.resolveExpectedChannel(phase, undefined), undefined);
+  assert.equal(scenarios.checkChannel(phase, 24, undefined).ok, true);
+});
+
+// Regression: wer erst den Kanal dreht und dann bestaetigt, bekam keine Antwort -
+// und weil ein Turn auf falschem Kanal die Phase nicht weiterschiebt, kam er aus
+// der switch-channel-Phase nie wieder heraus.
+step("checkChannel: switch-channel-Phase akzeptiert Anrufkanal UND Arbeitskanal", () => {
+  const setup = { vessel: "TARA", callsign: "DM3082", mmsi: "211423658", position: "x", workingChannel: 26 };
+  const switchPhase = { id: "switch-channel", expect: "switch-channel", label: { en: "x", de: "x" }, expectedChannel: 16 };
+
+  assert.equal(scenarios.checkChannel(switchPhase, 16, setup).ok, true, "Quittung auf dem Anrufkanal");
+  assert.equal(scenarios.checkChannel(switchPhase, 26, setup).ok, true, "frueh gedreht: trotzdem Antwort");
+  assert.equal(scenarios.isEarlySwitch(switchPhase, 26, setup), true);
+  assert.equal(scenarios.isEarlySwitch(switchPhase, 16, setup), false);
+
+  // Ein dritter, voellig falscher Kanal bleibt stumm.
+  const wrong = scenarios.checkChannel(switchPhase, 24, setup);
+  assert.equal(wrong.ok, false);
+  assert.equal(wrong.reason, "wrong-channel");
+
+  // Kanal 70 bleibt auch hier fuer Sprechfunk gesperrt.
+  assert.equal(scenarios.checkChannel(switchPhase, 70, setup).reason, "channel-70-voice-blocked");
+
+  // Die Toleranz gilt nur fuer switch-channel-Phasen.
+  const callPhase = { id: "call", expect: "call", label: { en: "x", de: "x" }, expectedChannel: 16 };
+  assert.equal(scenarios.isEarlySwitch(callPhase, 26, setup), false);
+  assert.equal(scenarios.checkChannel(callPhase, 26, setup).reason, "wrong-channel");
+
+  // Ohne gezogenen Arbeitskanal gibt es nichts zu tolerieren.
+  assert.equal(scenarios.isEarlySwitch(switchPhase, 26, undefined), false);
+});
+
+step("Block C: frueher Kanalwechsel wird dem Modell als Bewertungsfehler angesagt", () => {
+  const scenario = scenarios.getScenario("routine-coast-call");
+  const phase = scenario.phases.find((p) => p.expect === "switch-channel");
+  const setup = { vessel: "TARA", callsign: "DM3082", mmsi: "211423658", position: "x", workingChannel: 26 };
+
+  const early = prompts.buildDialogPrompt(scenario, phase, "en", setup, 26, 0)[2].text;
+  assert.ok(early.includes("EARLY CHANNEL SWITCH"), "Hinweis fehlt");
+  assert.ok(early.includes("do NOT set noReplyReason"), "Modell darf hier nicht schweigen");
+  assert.ok(/FAULT, never "pass"/.test(early), "muss als Fehler gewertet werden");
+  assert.ok(early.includes("channel 16"), "der Anrufkanal muss benannt sein");
+
+  // Auf dem Anrufkanal (regulaerer Weg) darf der Hinweis nicht erscheinen.
+  const regular = prompts.buildDialogPrompt(scenario, phase, "en", setup, 16, 0)[2].text;
+  assert.ok(!regular.includes("EARLY CHANNEL SWITCH"));
+});
+
+step("randomSetup: zieht den Arbeitskanal aus dem Pool, sonst undefined", () => {
+  const withPool = scenarios.getScenario("routine-coast-call");
+  const setup = scenarios.randomSetup(withPool, "en");
+  assert.ok(
+    withPool.setup.workingChannelPool.includes(setup.workingChannel),
+    `workingChannel ${setup.workingChannel} nicht aus dem Pool`
+  );
+
+  const noPool = scenarios.randomSetup(radioCheck, "en");
+  assert.equal(noPool.workingChannel, undefined);
+});
+
+step("Content: keine Phase nennt 'working' ohne workingChannelPool", () => {
+  for (const s of scenarios.listScenarios()) {
+    const pool = s.setup?.workingChannelPool ?? [];
+    for (const p of s.phases) {
+      if (p.expectedChannel === "working") {
+        assert.ok(pool.length > 0, `${s.id}/${p.id}: expectedChannel 'working' ohne Pool`);
+      }
+    }
+  }
+});
+
 step("advancePhase: phaseDone steuert Fortschritt, letzte Phase setzt scenarioDone", () => {
   const notDone = scenarios.advancePhase(radioCheck, 0, false);
   assert.equal(notDone.newIndex, 0);
@@ -168,6 +253,68 @@ step("buildDialogPrompt: 3 Bloecke, Cache-Breakpoint nur auf Block A, Block A sz
   const blocksDe = prompts.buildDialogPrompt(radioCheck, phase, "de", setup, 26, 2);
   assert.equal(blocksEn[0].text, blocksDe[0].text, "Block A muss byte-identisch bleiben (Cache-Stabilitaet)");
   assert.notEqual(blocksEn[2].text, blocksDe[2].text, "Block C ist turnspezifisch und darf sich unterscheiden");
+});
+
+step("spokenChannel: Kanalnummer ziffernweise, EN und DE", () => {
+  assert.equal(scenarios.spokenChannel(26), "two-six");
+  assert.equal(scenarios.spokenChannel(72, "en"), "seven-two");
+  assert.equal(scenarios.spokenChannel(6, "en"), "six");
+  assert.equal(scenarios.spokenChannel(26, "de"), "zwei-sechs");
+  assert.equal(scenarios.spokenChannel("16"), "one-six");
+});
+
+step("renderChannelTemplate: Platzhalter -> Kanal, ohne Arbeitskanal neutrale Umschreibung", () => {
+  const t = "change to channel {{workingChannelSpoken}} (ch {{workingChannel}})";
+  assert.equal(scenarios.renderChannelTemplate(t, 24), "change to channel two-four (ch 24)");
+  assert.equal(scenarios.renderChannelTemplate(t, 24, "de"), "change to channel zwei-vier (ch 24)");
+  // Kein roher Platzhalter, wenn das Szenario keinen Arbeitskanal zieht.
+  assert.ok(!scenarios.renderChannelTemplate(t, undefined).includes("{{"));
+});
+
+// Regression: stand ein fester Beispielkanal ("... change to channel two-six")
+// in Direction/Musterloesung, nannte die Station diesen statt des gezogenen
+// Arbeitskanals - der Trainee wechselte und bekam "no reply" auf genau dem
+// Kanal, den die Station ihm zugewiesen hatte.
+step("Content: Szenarien mit Arbeitskanal-Pool tragen keinen festen Beispielkanal", () => {
+  for (const s of scenarios.listScenarios()) {
+    const pool = s.setup?.workingChannelPool ?? [];
+    if (!pool.length) continue;
+    const texts = [
+      ...s.phases.flatMap((p) => [p.direction ?? "", p.sampleSolution?.en ?? "", p.sampleSolution?.de ?? ""]),
+      s.sampleSolution?.en ?? "",
+      s.sampleSolution?.de ?? "",
+    ];
+    for (const ch of pool) {
+      for (const lang of ["en", "de"]) {
+        // Nur "channel/Kanal <ziffern>" trifft: eine blosse Ziffernfolge wie
+        // "acht" (Kanal 8) steckt sonst in gewoehnlichen Woertern ("beabsichtige").
+        const spoken = scenarios.spokenChannel(ch, lang);
+        const named = new RegExp(`(channel|kanal)\\s+${spoken}\\b`, "i");
+        for (const text of texts) {
+          assert.ok(
+            !named.test(text),
+            `${s.id}: fester Kanal "${spoken}" im Content - stattdessen {{workingChannelSpoken}} verwenden`
+          );
+        }
+      }
+    }
+  }
+});
+
+step("buildDialogBlockB: nennt den gezogenen Arbeitskanal, keinen anderen aus dem Pool", () => {
+  const scenario = scenarios.getScenario("routine-coast-call");
+  const setup = { vessel: "TARA", callsign: "DM3082", mmsi: "211423658", position: "x", workingChannel: 24 };
+  const phase = scenario.phases[0];
+  const blockB = prompts.buildDialogPrompt(scenario, phase, "en", setup, 16, 0)[1].text;
+  const blockC = prompts.buildDialogPrompt(scenario, phase, "en", setup, 16, 0)[2].text;
+
+  assert.ok(blockB.includes("two-four"), "Block B muss den gezogenen Kanal ausgesprochen nennen");
+  assert.ok(!blockB.includes("{{"), "keine rohen Platzhalter im Prompt");
+  assert.ok(blockC.includes("two-four") && blockC.includes("24"));
+  for (const other of scenario.setup.workingChannelPool.filter((c) => c !== 24)) {
+    const spoken = scenarios.spokenChannel(other, "en");
+    assert.ok(!blockB.includes(spoken), `Block B nennt fremden Pool-Kanal "${spoken}"`);
+  }
 });
 
 step("buildEvaluationPrompt: 3 Bloecke, Cache-Breakpoint nur auf Block A", () => {

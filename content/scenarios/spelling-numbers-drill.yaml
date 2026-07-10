@@ -74,13 +74,13 @@ phases:
     direction: >-
       Ask the trainee to spell their callsign. Letters phonetically, digits
       spoken individually. Mark complete when the callsign is rendered correctly
-      (e.g. Delta Kilo Four Five One One for DK4511).
+      (e.g. Delta Lima Four Five One One for DL4511).
     hints:
-      en: "Spell the letters phonetically and speak each digit on its own: Delta Kilo Four Five One One."
-      de: "Buchstabiere die Buchstaben phonetisch und sprich jede Ziffer einzeln: Delta Kilo Four Five One One."
+      en: "Spell the letters phonetically and speak each digit on its own: Delta Lima Four Five One One."
+      de: "Buchstabiere die Buchstaben phonetisch und sprich jede Ziffer einzeln: Delta Lima Four Five One One."
     sampleSolution:
-      en: "Callsign Delta Kilo Four Five One One."
-      de: "Rufzeichen Delta Kilo Four Five One One."
+      en: "Callsign Delta Lima Four Five One One."
+      de: "Rufzeichen Delta Lima Four Five One One."
 
   - id: speak-numbers
     expect: message
@@ -142,12 +142,12 @@ rubric:
 sampleSolution:
   en: >-
     Vessel: Bravo, Lima, Uniform, Echo, Bravo, India, Romeo, Delta. — Callsign:
-    Delta Kilo Four Five One One. — Channel seven-two; one five six decimal
+    Delta Lima Four Five One One. — Channel seven-two; one five six decimal
     eight zero zero megahertz; time zero nine one five UTC. — Read-back: Delta
     Echo Seven One Five Four, channel one-six.
   de: >-
     Schiff: Bravo, Lima, Uniform, Echo, Bravo, India, Romeo, Delta. — Rufzeichen:
-    Delta Kilo Four Five One One. — Kanal Sieben-Zwei; one five six decimal eight
+    Delta Lima Four Five One One. — Kanal Sieben-Zwei; one five six decimal eight
     zero zero Megahertz; Zeit zero nine one five UTC. — Rueckgabe: Delta Echo
     Seven One Five Four, Kanal Eins-Sechs.
 

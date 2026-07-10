@@ -16,17 +16,23 @@ title:
 
 briefing:
   en: >-
-    Fire on board — you have had to abandon the engine room. Transmit a complete
-    distress call and distress message on channel 16. Scheme: MAYDAY x3, THIS IS
-    vessel + callsign + MMSI x3, then MAYDAY + vessel, position, nature of
-    distress, persons on board, assistance required, further information, OVER.
-    Distress traffic is always in English.
+    Fire on board — a fire in the engine room is spreading and you have had to
+    abandon the space. There are four persons on board and the life raft is being
+    made ready. Your vessel, callsign and MMSI are on the radio display, your
+    position on the GPS readout below. Transmit a complete distress call and
+    distress message on channel 16. Scheme: MAYDAY x3, THIS IS vessel + callsign
+    + MMSI x3, then MAYDAY + vessel, position, nature of distress, persons on
+    board, assistance required, further information, OVER. Distress traffic is
+    always in English.
   de: >-
-    Feuer an Bord — der Maschinenraum musste aufgegeben werden. Setzen Sie einen
-    vollstaendigen Notanruf und die Notmeldung auf Kanal 16 ab. Schema: MAYDAY
-    x3, THIS IS Schiff + Rufzeichen + MMSI x3, dann MAYDAY + Schiff, Position,
-    Art der Not, Personen an Bord, erbetene Hilfe, weitere Angaben, OVER.
-    Notverkehr immer auf Englisch.
+    Feuer an Bord — ein Feuer im Maschinenraum breitet sich aus, der Raum musste
+    aufgegeben werden. Es sind vier Personen an Bord, die Rettungsinsel wird
+    klargemacht. Schiffsname, Rufzeichen und MMSI stehen auf dem Funkgeraet, Ihre
+    Position auf der GPS-Anzeige unten. Setzen Sie einen vollstaendigen Notanruf
+    und die Notmeldung auf Kanal 16 ab. Schema: MAYDAY x3, THIS IS Schiff +
+    Rufzeichen + MMSI x3, dann MAYDAY + Schiff, Position, Art der Not, Personen
+    an Bord, erbetene Hilfe, weitere Angaben, OVER. Notverkehr immer auf
+    Englisch.
 
 stations:
   - id: bremen-rescue
@@ -74,8 +80,8 @@ phases:
       en: "Start with MAYDAY three times, THIS IS, then your vessel name three times, callsign and MMSI."
       de: "Beginne mit MAYDAY dreimal, THIS IS, dann deinen Schiffsnamen dreimal, Rufzeichen und MMSI."
     sampleSolution:
-      en: "MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird, callsign Delta Kilo Four Five One One, MMSI Two One One Four Two Three Six Five Eight."
-      de: "MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird, callsign Delta Kilo Four Five One One, MMSI Two One One Four Two Three Six Five Eight."
+      en: "MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird, callsign Delta Lima Four Five One One, MMSI Two One One Four Two Three Six Five Eight."
+      de: "MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird, callsign Delta Lima Four Five One One, MMSI Two One One Four Two Three Six Five Eight."
 
   - id: distress-message
     expect: message
@@ -159,7 +165,7 @@ rubric:
 sampleSolution:
   en: >-
     MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird,
-    callsign Delta Kilo Four Five One One, MMSI Two One One Four Two Three Six
+    callsign Delta Lima Four Five One One, MMSI Two One One Four Two Three Six
     Five Eight. — MAYDAY, sailing yacht Bluebird. My position is 54 degrees 32
     minutes north, 011 degrees 05 minutes east. Fire on board, engine room
     abandoned and spreading. Four persons on board. I require immediate
@@ -170,7 +176,7 @@ sampleSolution:
     the fire, standing by on channel one-six, over.
   de: >-
     MAYDAY, MAYDAY, MAYDAY. THIS IS sailing yacht Bluebird, Bluebird, Bluebird,
-    callsign Delta Kilo Four Five One One, MMSI Two One One Four Two Three Six
+    callsign Delta Lima Four Five One One, MMSI Two One One Four Two Three Six
     Five Eight. — MAYDAY, sailing yacht Bluebird. My position is 54 degrees 32
     minutes north, 011 degrees 05 minutes east. Fire on board, engine room
     abandoned and spreading. Four persons on board. I require immediate

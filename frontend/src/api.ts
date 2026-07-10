@@ -46,6 +46,8 @@ export interface SessionSetup {
   callsign: string;
   mmsi: string;
   position: string;
+  /** Je Session gezogener Arbeitskanal; loest `expectedChannel: "working"` auf. */
+  workingChannel?: Channel;
 }
 
 export interface HistoryEntry {
@@ -125,7 +127,15 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   scenarios: () => request<{ scenarios: ScenarioInfo[] }>("/api/scenarios"),
-  newSession: () => request<{ setup: SessionSetup }>("/api/session", { method: "POST" }),
+  // scenarioId ist Pflicht: ohne ihn zieht der Server die Stammdaten aus den
+  // Pools des ERSTEN geladenen Szenarios (Arbeitskanal, Position, Schiff) statt
+  // aus denen des gewaehlten - siehe backend/src/handler.ts (/api/session).
+  newSession: (scenarioId: string, language: Language) =>
+    request<{ setup: SessionSetup }>("/api/session", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ scenarioId, language }),
+    }),
   sttCredentials: () =>
     request<{
       region: string;

@@ -16,22 +16,26 @@ title:
 briefing:
   en: >-
     Your vessel sent a MAYDAY (fire on board) and Bremen Rescue Radio is
-    coordinating; you are controlling the distress traffic on channel 16. A
-    careless station starts a routine call and interferes. Impose radio silence
-    with SEELONCE MAYDAY. Later, once the fire is out and the situation is
-    resolved, cancel distress traffic with SEELONCE FEENEE (with time and vessel
-    name). Note: a station that is only a bystander, not controlling the traffic,
-    would impose silence with SEELONCE DISTRESS and otherwise keep silent and
-    listen. Distress traffic is in English.
+    coordinating; you are controlling the distress traffic on channel 16. The
+    motor vessel Delphin starts a careless routine call and interferes. Impose
+    radio silence with SEELONCE MAYDAY. Later, once the fire is out and the
+    situation is resolved, cancel distress traffic with SEELONCE FEENEE (with
+    time and vessel name); use the current time in UTC — the exact value is not
+    graded, only that a four-digit UTC time is given. Note: a station that is
+    only a bystander, not controlling the traffic, would impose silence with
+    SEELONCE DISTRESS and otherwise keep silent and listen. Distress traffic is
+    in English.
   de: >-
     Ihr Schiff hat einen MAYDAY abgesetzt (Feuer an Bord), Bremen Rescue Radio
-    koordiniert; Sie leiten den Notverkehr auf Kanal 16. Eine unachtsame Station
-    beginnt einen Routineanruf und stoert. Gebieten Sie Funkstille mit SEELONCE
-    MAYDAY. Spaeter, wenn das Feuer geloescht und die Lage bereinigt ist, heben
-    Sie den Notverkehr mit SEELONCE FEENEE auf (mit Uhrzeit und Schiffsname).
-    Hinweis: Eine Station, die nur Dritter ist und den Verkehr nicht leitet,
-    wuerde Funkstille mit SEELONCE DISTRESS gebieten und ansonsten Funkstille
-    halten und mithoeren. Notverkehr auf Englisch.
+    koordiniert; Sie leiten den Notverkehr auf Kanal 16. Das Motorschiff Delphin
+    beginnt unachtsam einen Routineanruf und stoert. Gebieten Sie Funkstille mit
+    SEELONCE MAYDAY. Spaeter, wenn das Feuer geloescht und die Lage bereinigt
+    ist, heben Sie den Notverkehr mit SEELONCE FEENEE auf (mit Uhrzeit und
+    Schiffsname); nehmen Sie die aktuelle Uhrzeit in UTC — der genaue Wert wird
+    nicht bewertet, nur dass eine vierstellige UTC-Zeit genannt wird. Hinweis:
+    Eine Station, die nur Dritter ist und den Verkehr nicht leitet, wuerde
+    Funkstille mit SEELONCE DISTRESS gebieten und ansonsten Funkstille halten und
+    mithoeren. Notverkehr auf Englisch.
 
 stations:
   - id: bremen-rescue

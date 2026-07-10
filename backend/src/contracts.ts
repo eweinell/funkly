@@ -31,6 +31,12 @@ export interface SessionSetup {
   mmsi: string;
   /** Positionsbeschreibung in der Sessionsprache (Freitext, fachlich korrekt). */
   position: string;
+  /**
+   * Der fuer diese Session gezogene Arbeitskanal (aus `setup.workingChannelPool`).
+   * Phasen mit `expectedChannel: "working"` werden dagegen aufgeloest. Fehlt, wenn
+   * das Szenario keinen Arbeitskanal-Pool hat.
+   */
+  workingChannel?: Channel;
 }
 
 export interface HistoryEntry {

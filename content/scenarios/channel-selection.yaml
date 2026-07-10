@@ -95,17 +95,18 @@ phases:
       de: Sauberer Wechsel von 16
     station: instructor
     direction: >-
-      Play a coast station briefly: acknowledge a short call and assign a
-      working channel from the session working-channel value ("change to channel
-      two-six"). The trainee must read back and confirm the switch, keeping
-      channel 16 free of long working traffic. Mark complete once the trainee
-      confirms the switch correctly. Set done.
+      Play a coast station briefly: acknowledge a short call and assign the
+      session working channel, which is channel {{workingChannel}}: say "change
+      to channel {{workingChannelSpoken}}". Never name any other channel. The
+      trainee must read back and confirm the switch, keeping channel 16 free of
+      long working traffic. Mark complete once the trainee confirms the switch
+      correctly. Set done.
     hints:
       en: "Read back the assigned working channel and confirm the switch; don't hold a conversation on 16."
       de: "Lies den zugewiesenen Arbeitskanal zurueck und bestaetige den Wechsel; fuehre kein Gespraech auf 16."
     sampleSolution:
-      en: "Changing to channel two-six, over."
-      de: "Wechsle auf Kanal Zwei-Sechs, over."
+      en: "Changing to channel {{workingChannelSpoken}}, over."
+      de: "Wechsle auf Kanal {{workingChannelSpoken}}, over."
 
 rubric:
   - id: channel-purpose-knowledge
@@ -140,13 +141,15 @@ sampleSolution:
     bridge-to-bridge. — After the DSC alert on channel seven-zero, voice
     distress traffic is on channel one-six; dual watch means monitoring channel
     one-six together with a working channel. — (Coast: change to channel
-    two-six, over.) — Changing to channel two-six, over.
+    {{workingChannelSpoken}}, over.) — Changing to channel
+    {{workingChannelSpoken}}, over.
   de: >-
     Kanal Eins-Sechs fuer Sprech-Anruf und Not; Kanal Sieben-Zero nur fuer DSC;
     Kanal Sieben-Zwei fuer Schiff-Schiff; Kanal Eins-Drei fuer Bruecke-Bruecke.
     — Nach dem DSC-Alarm auf Kanal Sieben-Zero laeuft der Sprech-Notverkehr auf
     Kanal Eins-Sechs; Dual Watch heisst, Kanal Eins-Sechs zusammen mit einem
     Arbeitskanal zu ueberwachen. — (Kuestenfunkstelle: wechseln Sie auf Kanal
-    Zwei-Sechs, over.) — Wechsle auf Kanal Zwei-Sechs, over.
+    {{workingChannelSpoken}}, over.) — Wechsle auf Kanal
+    {{workingChannelSpoken}}, over.
 
 tags: [quiz, channels, dsc, dual-watch, beginner]

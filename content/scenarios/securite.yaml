@@ -15,17 +15,20 @@ title:
 
 briefing:
   en: >-
-    You have sighted a large drifting container, a hazard to navigation, in the
-    Fehmarn Belt. Broadcast a SECURITE safety message on channel 16 to warn
-    other traffic: SECURITE x3, All Stations x3, THIS IS vessel x3, then the
-    hazard, its position and a recommendation, ending with OUT (no reply
-    expected). Safety traffic is in English.
+    You are passing a large drifting container close aboard in the Fehmarn Belt —
+    a hazard to navigation. Since it is right alongside you, report the hazard at
+    your own position, shown on the GPS readout below. Broadcast a SECURITE
+    safety message on channel 16 to warn other traffic: SECURITE x3, All Stations
+    x3, THIS IS vessel x3, then the hazard, its position and a recommendation,
+    ending with OUT (no reply expected). Safety traffic is in English.
   de: >-
-    Sie haben im Fehmarnbelt einen grossen treibenden Container gesichtet — eine
-    Gefahr fuer die Schifffahrt. Setzen Sie eine SECURITE-Sicherheitsmeldung auf
-    Kanal 16 ab, um andere zu warnen: SECURITE x3, All Stations x3, THIS IS
-    Schiff x3, dann die Gefahr, ihre Position und eine Empfehlung, Abschluss mit
-    OUT (keine Antwort erwartet). Sicherheitsverkehr auf Englisch.
+    Sie passieren im Fehmarnbelt dicht an einem grossen treibenden Container —
+    eine Gefahr fuer die Schifffahrt. Da er direkt neben Ihnen treibt, geben Sie
+    die Gefahr auf Ihrer eigenen Position an, die auf der GPS-Anzeige unten
+    steht. Setzen Sie eine SECURITE-Sicherheitsmeldung auf Kanal 16 ab, um andere
+    zu warnen: SECURITE x3, All Stations x3, THIS IS Schiff x3, dann die Gefahr,
+    ihre Position und eine Empfehlung, Abschluss mit OUT (keine Antwort
+    erwartet). Sicherheitsverkehr auf Englisch.
 
 stations:
   - id: coast-traffic
@@ -70,8 +73,8 @@ phases:
       en: "Start with SECURITE three times, address All Stations three times, THIS IS, then your vessel name three times and callsign."
       de: "Beginne mit SECURITE dreimal, richte an All Stations dreimal, THIS IS, dann Schiffsname dreimal und Rufzeichen."
     sampleSolution:
-      en: "SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One."
-      de: "SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One."
+      en: "SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Lima Four Five One One."
+      de: "SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Lima Four Five One One."
 
   - id: safety-message
     expect: message
@@ -128,13 +131,13 @@ rubric:
 sampleSolution:
   en: >-
     SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS
-    IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One.
+    IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Lima Four Five One One.
     Large drifting container, hazard to navigation, in position 54 degrees 36
     minutes north, 011 degrees 12 minutes east, Fehmarn Belt. All vessels are
     advised to keep clear and navigate with caution. Out.
   de: >-
     SECURITE, SECURITE, SECURITE. All stations, all stations, all stations, THIS
-    IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Kilo Four Five One One.
+    IS sailing yacht Bluebird, Bluebird, Bluebird, Delta Lima Four Five One One.
     Large drifting container, hazard to navigation, in position 54 degrees 36
     minutes north, 011 degrees 12 minutes east, Fehmarn Belt. All vessels are
     advised to keep clear and navigate with caution. Out.

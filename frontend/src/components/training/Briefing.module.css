@@ -9,3 +9,13 @@
   padding: 1px 6px; margin-right: 6px;
 }
 .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; gap: 10px; }
+.plotter {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px;
+  margin-top: 8px; padding: 8px 16px;
+  background: #0b1216; border: 1px solid #33414b; border-radius: var(--r-md);
+}
+.plotterLabel {
+  font-family: var(--font-lcd); font-size: 10px; letter-spacing: .08em;
+  color: #6d818d; text-transform: uppercase;
+}
+.plotterValue { font-family: var(--font-lcd); font-size: 12.5px; color: var(--lcd-amber); }

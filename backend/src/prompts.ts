@@ -15,7 +15,8 @@
  * gegenueber der Markdown-Vorlage, bleibt aber weiterhin szenario-/session-
  * unabhaengig (kein interpolierter Wert), also weiterhin vollstaendig cachebar.
  */
-import type { Language } from "./contracts";
+import type { Channel, Language } from "./contracts";
+import { isEarlySwitch, renderChannelTemplate, resolveExpectedChannel, spokenChannel } from "./scenarios";
 import type { Phase, Scenario, SessionSetup } from "./scenarios";
 import { localize } from "./scenarios";
 
@@ -109,16 +110,21 @@ function languagePolicyNote(policy: Scenario["languagePolicy"]): string {
 /** Block B: szenariospezifisch, aus dem geladenen Content-Paket gerendert (pro
  *  Session einmal berechenbar, hier pro Turn - Kosten sind vernachlaessigbar,
  *  da nicht Teil des Cache-Breakpoints). */
-function buildDialogBlockB(scenario: Scenario, language: Language): string {
+function buildDialogBlockB(scenario: Scenario, language: Language, setup: SessionSetup): string {
   const stationsBlock = scenario.stations
     .map((s) => `  - id=${s.id}  name="${s.name}"  role: ${s.role}`)
     .join("\n");
 
   const phasesBlock = scenario.phases
     .map((p) => {
-      const ch = p.expectedChannel !== undefined ? String(p.expectedChannel) : "(any)";
+      // "working"-Phasen zeigen dem Modell den konkret gezogenen Arbeitskanal,
+      // nicht den Sentinel - sonst nennt es im Dialog den falschen Kanal.
+      const resolved = resolveExpectedChannel(p, setup);
+      const ch = resolved !== undefined ? String(resolved) : "(any)";
       const station = p.station ?? scenario.stations[0]?.id ?? "";
-      const direction = p.direction ?? "";
+      // Directions sind englisch (Modellanweisung), die Musterloesung unten ist
+      // lokalisiert - beide duerfen keinen festen Beispielkanal tragen.
+      const direction = renderChannelTemplate(p.direction ?? "", setup.workingChannel, "en");
       return `  - id=${p.id}  expect=${p.expect}  expectedChannel=${ch}\n    station=${station}\n    direction: ${direction}`;
     })
     .join("\n");
@@ -131,7 +137,11 @@ function buildDialogBlockB(scenario: Scenario, language: Language): string {
     .join("\n");
 
   const sample = scenario.sampleSolution
-    ? `\n\nMODEL SOLUTION (reference, do not require verbatim match):\n${localize(scenario.sampleSolution, language)}`
+    ? `\n\nMODEL SOLUTION (reference, do not require verbatim match):\n${renderChannelTemplate(
+        localize(scenario.sampleSolution, language),
+        setup.workingChannel,
+        language
+      )}`
     : "";
 
   return `SCENARIO: ${localize(scenario.title, language)}  (useCase ${scenario.useCase}, difficulty ${scenario.difficulty})
@@ -161,14 +171,42 @@ function buildDialogBlockC(
   language: Language,
   channel: unknown,
   phaseId: string,
-  replayCount?: number
+  replayCount?: number,
+  earlySwitchFrom?: Channel
 ): string {
   const replayLine = replayCount !== undefined ? `\nReplays used: ${replayCount}` : "";
+  // Der Trainee hat schon auf den Arbeitskanal gedreht, bevor er den Wechsel auf
+  // dem Anrufkanal quittiert hat. Die Engine laesst den Turn durch (sonst Sackgasse,
+  // s. isEarlySwitch); die fehlende Quittung muss aber die Bewertung treffen.
+  const earlySwitchLine =
+    earlySwitchFrom !== undefined
+      ? `\nEARLY CHANNEL SWITCH: the trainee is already transmitting on the working
+channel, although this phase still expects the readback and acknowledgement on
+channel ${String(earlySwitchFrom)}. Answer in character on the working channel and let the
+exercise continue - do NOT stay silent and do NOT set noReplyReason. In
+"evaluation" this is a FAULT, never "pass": under the channel-discipline
+criterion, record that the trainee left channel ${String(earlySwitchFrom)} without reading back and
+acknowledging the assigned working channel there. Say so in the finding.`
+      : "";
+  // Der Arbeitskanal wird je Session gezogen; die Engine prueft gegen genau
+  // diesen Wert. Nennt die Station einen anderen, laeuft der Trainee in ein
+  // "no reply" auf dem Kanal, den sie ihm gerade genannt hat - daher die
+  // ausdrueckliche Sperre gegen jeden anderen Kanal.
+  const workingLine =
+    setup.workingChannel !== undefined
+      ? `\nWORKING CHANNEL FOR THIS SESSION: ${String(setup.workingChannel)}, spoken "${spokenChannel(
+          setup.workingChannel
+        )}".
+When a phase direction tells you to assign, propose or agree a working channel,
+name exactly this channel and no other - not one from an example, not one the
+trainee suggested. Name a different one and the trainee will switch to a channel
+the engine never answers on, which dead-ends the exercise.`
+      : "";
   return `Trainee vessel this session: ${setup.vessel}, callsign ${setup.callsign},
 MMSI ${setup.mmsi}, position ${setup.position}.
 Session language: ${language}.
 Currently selected channel: ${String(channel)}.
-Current phase (client view): ${phaseId}.${replayLine}`;
+Current phase (client view): ${phaseId}.${workingLine}${earlySwitchLine}${replayLine}`;
 }
 
 export function buildDialogPrompt(
@@ -179,10 +217,16 @@ export function buildDialogPrompt(
   channel: unknown,
   replayCount?: number
 ): SystemBlock[] {
+  // Kanal des laufenden Turns (die Engine hat ihn bereits durchgelassen): steht er
+  // bei einer switch-channel-Phase schon auf dem Arbeitskanal, fehlt die Quittung
+  // auf dem Anrufkanal - das muss das Modell wissen, um es zu bemaengeln.
+  const earlySwitchFrom = isEarlySwitch(phase, channel as Channel, setup)
+    ? resolveExpectedChannel(phase, setup)
+    : undefined;
   return [
     { type: "text", text: DIALOG_BLOCK_A, cache_control: { type: "ephemeral" } },
-    { type: "text", text: buildDialogBlockB(scenario, language) },
-    { type: "text", text: buildDialogBlockC(setup, language, channel, phase.id, replayCount) },
+    { type: "text", text: buildDialogBlockB(scenario, language, setup) },
+    { type: "text", text: buildDialogBlockC(setup, language, channel, phase.id, replayCount, earlySwitchFrom) },
   ];
 }
 

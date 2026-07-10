@@ -15,16 +15,20 @@ title:
 
 briefing:
   en: >-
-    You are overtaking another vessel in the Kadet Trench traffic lane. Call the
-    other vessel on channel 16, propose a ship-to-ship working channel (e.g. 72
-    or 77), switch over, and arrange a safe passing (on which side you will
-    overtake). Agree the arrangement and close.
+    You are overtaking the motor vessel Orion in the Kadet Trench traffic lane;
+    her name is on your AIS display. Call Orion on channel 16 and propose a
+    ship-to-ship working channel (e.g. 72 or 77); Orion may name a different one,
+    so read back whichever channel she settles on before you switch. Then arrange
+    a safe passing. Which side you overtake on is your decision — state it
+    unambiguously, have it confirmed, and close.
   de: >-
-    Sie ueberholen ein anderes Schiff in der Verkehrstrennung Kadetrinne. Rufen
-    Sie das andere Schiff auf Kanal 16, schlagen Sie einen Schiff-Schiff-
-    Arbeitskanal vor (z. B. 72 oder 77), wechseln Sie und treffen Sie eine
-    sichere Passierabsprache (auf welcher Seite Sie ueberholen). Bestaetigen Sie
-    die Absprache und beenden Sie den Verkehr.
+    Sie ueberholen das Motorschiff Orion in der Verkehrstrennung Kadetrinne; der
+    Name steht auf Ihrer AIS-Anzeige. Rufen Sie Orion auf Kanal 16 und schlagen
+    Sie einen Schiff-Schiff-Arbeitskanal vor (z. B. 72 oder 77); Orion kann einen
+    anderen nennen — lesen Sie den Kanal zurueck, auf den sie sich festlegt, und
+    wechseln Sie dann. Treffen Sie anschliessend eine sichere Passierabsprache.
+    Auf welcher Seite Sie ueberholen, entscheiden Sie selbst — nennen Sie es
+    eindeutig, lassen Sie es bestaetigen und beenden Sie den Verkehr.
 
 stations:
   - id: other-vessel
@@ -64,15 +68,18 @@ phases:
     direction: >-
       The trainee calls the other vessel by name on channel 16 (other vessel
       name 1-3x, THIS IS, own vessel + callsign, OVER) and proposes a
-      ship-to-ship working channel. Answer in character, agree, and confirm the
-      proposed channel. Mark complete when the trainee has called correctly and
-      proposed a valid ship-to-ship channel (6, 8, 72 or 77).
+      ship-to-ship working channel. Orion decides which channel is actually used:
+      always channel {{workingChannel}}. If the trainee proposed exactly that
+      channel, confirm it; otherwise counter with it in character ("negative,
+      channel {{workingChannelSpoken}}, over"). Never settle on any other
+      channel. Mark complete when the trainee has called correctly and proposed
+      a valid ship-to-ship channel (6, 8, 72 or 77).
     hints:
       en: "Call the other vessel by name, say THIS IS and your vessel, then propose a ship-to-ship channel such as 72 or 77. End with OVER."
       de: "Rufe das andere Schiff mit Namen, sage THIS IS und dein Schiff, schlage dann einen Schiff-Schiff-Kanal wie 72 oder 77 vor. Schliesse mit OVER."
     sampleSolution:
-      en: "Motor vessel Orion, Motor vessel Orion, this is sailing yacht Bluebird, Delta Kilo Four Five One One, channel seven-two please, over."
-      de: "Motorschiff Orion, Motorschiff Orion, hier ist Segelyacht Bluebird, Delta Kilo Four Five One One, Kanal Sieben-Zwei bitte, over."
+      en: "Motor vessel Orion, Motor vessel Orion, this is sailing yacht Bluebird, Delta Lima Four Five One One, channel {{workingChannelSpoken}} please, over."
+      de: "Motorschiff Orion, Motorschiff Orion, hier ist Segelyacht Bluebird, Delta Lima Four Five One One, Kanal {{workingChannelSpoken}} bitte, over."
 
   - id: switch-channel
     expect: switch-channel
@@ -82,14 +89,17 @@ phases:
     station: other-vessel
     expectedChannel: 16
     direction: >-
-      The trainee confirms the agreed ship-to-ship channel and both switch off
-      16. Keep this short. Mark complete when the channel change is confirmed.
+      The trainee reads back the channel Orion settled on and both switch off 16.
+      Keep this short. Mark complete when the channel change is confirmed. If the
+      trainee has already switched to channel {{workingChannel}} without reading
+      the channel back on 16, answer there anyway and treat the phase as complete,
+      but fault the missing readback under channel discipline.
     hints:
-      en: "Confirm the agreed channel and switch, e.g. 'changing to channel seven-two'."
-      de: "Bestaetige den vereinbarten Kanal und wechsle, z. B. 'wechsle auf Kanal Sieben-Zwei'."
+      en: "Read back the channel the other vessel agreed and switch, e.g. 'changing to channel {{workingChannelSpoken}}'."
+      de: "Lies den vom anderen Schiff bestaetigten Kanal zurueck und wechsle, z. B. 'wechsle auf Kanal {{workingChannelSpoken}}'."
     sampleSolution:
-      en: "Agreed, changing to channel seven-two, over."
-      de: "Verstanden, wechsle auf Kanal Sieben-Zwei, over."
+      en: "Agreed, changing to channel {{workingChannelSpoken}}, over."
+      de: "Verstanden, wechsle auf Kanal {{workingChannelSpoken}}, over."
 
   - id: arrangement
     expect: message
@@ -97,13 +107,12 @@ phases:
       en: Passing arrangement
       de: Passierabsprache
     station: other-vessel
-    expectedChannel: 72
+    expectedChannel: working
     direction: >-
       Now on the ship-to-ship channel. The trainee re-establishes contact and
       states a clear passing/overtaking intention (which side, e.g. "I intend to
       overtake you on your port side"). Negotiate briefly and agree. Mark
-      complete once a clear, mutually agreed passing arrangement exists. Treat
-      the session ship-to-ship channel as the expected channel here.
+      complete once a clear, mutually agreed passing arrangement exists.
     hints:
       en: "State your intention clearly: on which side you will overtake and any request to the other vessel (e.g. hold course and speed)."
       de: "Nenne deine Absicht klar: auf welcher Seite du ueberholst und ggf. eine Bitte an das andere Schiff (z. B. Kurs und Fahrt halten)."
@@ -117,7 +126,7 @@ phases:
       en: Confirm & close
       de: Bestaetigen & beenden
     station: other-vessel
-    expectedChannel: 72
+    expectedChannel: working
     direction: >-
       The trainee confirms the agreed arrangement and closes with OUT. Mark the
       exercise complete after a proper closing. Set done.
@@ -156,19 +165,21 @@ rubric:
 sampleSolution:
   en: >-
     Motor vessel Orion, Motor vessel Orion, this is sailing yacht Bluebird,
-    Delta Kilo Four Five One One, channel seven-two please, over. — (Orion:
-    Bluebird, this is Orion, channel seven-two, over.) — Agreed, changing to
-    channel seven-two, over. — (on 72) Orion, this is Bluebird, I intend to
-    overtake you on your port side, request you keep your course and speed,
-    over. — (Orion: Bluebird, this is Orion, agreed, I keep course and speed,
-    over.) — Orion, this is Bluebird, thank you, out.
+    Delta Lima Four Five One One, channel {{workingChannelSpoken}} please, over.
+    — (Orion: Bluebird, this is Orion, channel {{workingChannelSpoken}}, over.)
+    — Agreed, changing to channel {{workingChannelSpoken}}, over. — (on
+    {{workingChannel}}) Orion, this is Bluebird, I intend to overtake you on
+    your port side, request you keep your course and speed, over. — (Orion:
+    Bluebird, this is Orion, agreed, I keep course and speed, over.) — Orion,
+    this is Bluebird, thank you, out.
   de: >-
     Motorschiff Orion, Motorschiff Orion, hier ist Segelyacht Bluebird, Delta
-    Kilo Four Five One One, Kanal Sieben-Zwei bitte, over. — (Orion: Bluebird,
-    hier ist Orion, Kanal Sieben-Zwei, over.) — Verstanden, wechsle auf Kanal
-    Sieben-Zwei, over. — (auf 72) Orion, hier ist Bluebird, ich beabsichtige,
-    Sie an Ihrer Backbordseite zu ueberholen, ich bitte Sie, Kurs und Fahrt zu
-    halten, over. — (Orion: Bluebird, hier ist Orion, verstanden, ich halte Kurs
-    und Fahrt, over.) — Orion, hier ist Bluebird, danke, out.
+    Kilo Four Five One One, Kanal {{workingChannelSpoken}} bitte, over. —
+    (Orion: Bluebird, hier ist Orion, Kanal {{workingChannelSpoken}}, over.) —
+    Verstanden, wechsle auf Kanal {{workingChannelSpoken}}, over. — (auf
+    {{workingChannel}}) Orion, hier ist Bluebird, ich beabsichtige, Sie an Ihrer
+    Backbordseite zu ueberholen, ich bitte Sie, Kurs und Fahrt zu halten, over.
+    — (Orion: Bluebird, hier ist Orion, verstanden, ich halte Kurs und Fahrt,
+    over.) — Orion, hier ist Bluebird, danke, out.
 
 tags: [routine, ship-to-ship, channel-switch, collision-avoidance]

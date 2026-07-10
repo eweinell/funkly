@@ -62,8 +62,8 @@ phases:
       en: "Call the station, say THIS IS, give your vessel and callsign, then ask for a radio check. End with OVER."
       de: "Rufe die Station, sage THIS IS, nenne Schiff und Rufzeichen, bitte dann um einen Radio Check. Schliesse mit OVER."
     sampleSolution:
-      en: "Lyngby Radio, Lyngby Radio, this is sailing yacht Bluebird, Delta Kilo Four Five One One, radio check, over."
-      de: "Lyngby Radio, Lyngby Radio, hier ist Segelyacht Bluebird, Delta Kilo Four Five One One, Radio Check, over."
+      en: "Lyngby Radio, Lyngby Radio, this is sailing yacht Bluebird, Delta Lima Four Five One One, radio check, over."
+      de: "Lyngby Radio, Lyngby Radio, hier ist Segelyacht Bluebird, Delta Lima Four Five One One, Radio Check, over."
 
   - id: closing
     expect: closing
@@ -97,8 +97,8 @@ rubric:
   - id: phonetic-alphabet
     weight: 2
     criterion:
-      en: "Callsign spelled with the ICAO/NATO phonetic alphabet (Delta Kilo ...), not read as plain letters."
-      de: "Rufzeichen mit dem ICAO/NATO-Buchstabieralphabet buchstabiert (Delta Kilo ...), nicht als blosse Buchstaben."
+      en: "Callsign spelled with the ICAO/NATO phonetic alphabet (Delta Lima ...), not read as plain letters."
+      de: "Rufzeichen mit dem ICAO/NATO-Buchstabieralphabet buchstabiert (Delta Lima ...), nicht als blosse Buchstaben."
   - id: brevity-channel-discipline
     weight: 2
     criterion:
@@ -107,12 +107,12 @@ rubric:
 
 sampleSolution:
   en: >-
-    Lyngby Radio, Lyngby Radio, this is sailing yacht Bluebird, Delta Kilo Four
+    Lyngby Radio, Lyngby Radio, this is sailing yacht Bluebird, Delta Lima Four
     Five One One, radio check, over. — (Lyngby Radio: Sailing yacht Bluebird,
     this is Lyngby Radio, I read you five, over.) — Lyngby Radio, this is
     Bluebird, received, I read you five as well, thank you, out.
   de: >-
-    Lyngby Radio, Lyngby Radio, hier ist Segelyacht Bluebird, Delta Kilo Four
+    Lyngby Radio, Lyngby Radio, hier ist Segelyacht Bluebird, Delta Lima Four
     Five One One, Radio Check, over. — (Lyngby Radio: Segelyacht Bluebird, hier
     ist Lyngby Radio, ich lese Sie fuenf, over.) — Lyngby Radio, hier ist
     Bluebird, verstanden, ich lese Sie ebenfalls fuenf, danke, out.

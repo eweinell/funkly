@@ -89,6 +89,8 @@ export class FunklyStack extends cdk.Stack {
     // API-Lambda: /api/scenarios, /api/turn, /api/stt-credentials
     // ------------------------------------------------------------------
     const backendDir = path.join(__dirname, "..", "..", "backend");
+    // Vorwaertsslashes: der Pfad landet in einer Shell-Kommandozeile (Windows).
+    const buildContentScript = path.join(backendDir, "scripts", "build-content.mjs").replace(/\\/g, "/");
 
     // Dialog-Turn-Modell (Haiku) - per Context uebersteuerbar, falls im
     // Ziel-Account nur ein regionales Inference-Profil verfuegbar ist
@@ -136,6 +138,17 @@ export class FunklyStack extends cdk.Stack {
       bundling: {
         format: OutputFormat.CJS,
         externalModules: [], // alles bundeln (inkl. AWS SDK v3 + Anthropic SDK)
+        // esbuild inlined `src/generated/scenarios.generated.json`. Die Datei ist
+        // gitignored und wird NICHT vom Bundling erzeugt - ohne diesen Hook
+        // deployt `cdk deploy` stillschweigend den zuletzt lokal gebauten
+        // Content-Stand (oder schlaegt fehl, wenn er nie gebaut wurde).
+        commandHooks: {
+          beforeBundling(): string[] {
+            return [`node "${buildContentScript}"`];
+          },
+          beforeInstall: () => [],
+          afterBundling: () => [],
+        },
       },
       environment: {
         MODEL_ID: modelId,

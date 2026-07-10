@@ -52,6 +52,7 @@ Jede Phase trägt:
 - `expect` — Phasentyp (siehe §2).
 - `label` — Phasenlabel DE/EN für den Stepper (UI-SPEZIFIKATION §3).
 - `expectedChannel` — Sollkanal (UI-SPEZIFIKATION §1). Falscher Kanal → keine Antwort.
+  `working` = der je Session gezogene Arbeitskanal (siehe §3).
 - `hints` — Coaching-Zeile „Als Nächstes: …" (nur Trainingsmodus, UI-SPEZIFIKATION §3).
 - optional `direction` (Regie fürs Modell), `station`, `sampleSolution`, `optional`.
 
@@ -103,6 +104,13 @@ UI-SPEZIFIKATION.md §9.
 - **Kanal** ist diegetisch (UI-SPEZIFIKATION §1): `expectedChannel` je Phase; bei
   falschem Kanal antwortet die Gegenstelle nicht (`noReplyReason` im API-Vertrag).
   Kanal 70 ist DSC-only. Kanäle sind Zahl (1–88) oder Sonderbezeichner-String.
+- **Arbeitskanal**: `expectedChannel: working` ist ein Sentinel, kein Kanal. Er
+  löst gegen `SessionSetup.workingChannel` auf — den Kanal, den `randomSetup()`
+  je Session aus `setup.workingChannelPool` zieht und den das Dialogmodell in
+  Block C genannt bekommt. Phasen, die auf einem zugewiesenen Arbeitskanal
+  spielen, tragen `working` statt einer festen Zahl; sonst prüft die Engine gegen
+  einen Kanal, den die Station nie zuweist. Wer `working` benutzt, **muss** einen
+  `workingChannelPool` haben (die Validierung erzwingt das).
 - **`noiseLevel`** ist szenariospezifisch, nicht global — Hörverständnis erzwingt
   darüber ein Mindestrauschen.
 - **`maxReplays`** begrenzt Wiedergaben im Diktat; `null` = unbegrenzt (Default),

@@ -56,7 +56,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       dispatch({ type: "START_SCENARIO", scenario: s });
       resetHistory();
       api
-        .newSession()
+        .newSession(s.id, language)
         .then((r) => dispatch({ type: "SET_SETUP", setup: r.setup }))
         .catch((e) => dispatch({ type: "SET_ERROR", error: String(e) }));
       // STT-Credentials vorwaermen (BRIEFING-STT-ECHTZEIT.md Schritt 5): der erste
@@ -64,7 +64,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // Tastendruck und erstem Audio-Frame.
       warmupTranscribeClient();
     },
-    [resetHistory]
+    [resetHistory, language]
   );
 
   const endSession = useCallback(() => dispatch({ type: "END_SESSION" }), []);
