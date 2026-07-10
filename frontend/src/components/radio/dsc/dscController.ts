@@ -111,6 +111,9 @@ export interface UseDscControllerOptions {
   onSwitchChannel: (channel: number) => void;
 }
 
+/** Zustandsmaschine + Aktionen, wie sie DscScreens und die Skins hereingereicht bekommen. */
+export type DscController = ReturnType<typeof useDscController>;
+
 export function useDscController({ onSystemLog, onSwitchChannel }: UseDscControllerOptions) {
   const [state, dispatch] = useReducer(reducer, initialDscState);
   const holdTimer = useRef<number>();

@@ -17,6 +17,8 @@ export interface IcM330LcdProps {
   softkeyLabels?: [string, string, string, string];
   /** Sternchen = Favoritenkanal (wie im Original neben der 16). */
   favorite?: boolean;
+  /** Blinkender Hinweis ueber der Kanalanzeige, z. B. "CH70 NUR DSC". */
+  warningText?: string;
 }
 
 export function IcM330Lcd({
@@ -27,6 +29,7 @@ export function IcM330Lcd({
   infoLines = ["42°49N", "10°19E", "12:00I"],
   softkeyLabels = ["SCAN", "DW", "HI/LO", "CH/WX"],
   favorite = true,
+  warningText,
 }: IcM330LcdProps) {
   return (
     <div className={styles.lcd} role="img" aria-label={`LCD: channel ${channel}, ${statusTag}`}>
@@ -51,9 +54,11 @@ export function IcM330Lcd({
         </div>
       </div>
 
+      {warningText && <div className={styles.warning}>{warningText}</div>}
+
       <div className={styles.softRow}>
-        {softkeyLabels.map((label) => (
-          <span key={label} className={styles.softTab}>
+        {softkeyLabels.map((label, i) => (
+          <span key={i} className={styles.softTab}>
             {label}
           </span>
         ))}

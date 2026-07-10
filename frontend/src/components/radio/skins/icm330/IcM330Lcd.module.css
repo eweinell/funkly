@@ -80,6 +80,25 @@
   text-shadow: none;
 }
 
+/* Warnhinweis (z. B. CH70 nur DSC): blinkt wie eine Segmentanzeige. */
+.warning {
+  margin: 1px 0 2px;
+  padding: 1px 4px;
+  text-align: center;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  color: #f5b03a;
+  background: var(--seg);
+  border-radius: 2px;
+  animation: lcdBlink 0.55s steps(1, end) infinite;
+}
+@keyframes lcdBlink {
+  50% { opacity: 0.25; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .warning { animation: none; }
+}
+
 .softRow {
   display: grid;
   grid-template-columns: repeat(4, 1fr);

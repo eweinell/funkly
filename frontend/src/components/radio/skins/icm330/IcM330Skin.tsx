@@ -6,10 +6,10 @@ import styles from "./IcM330Skin.module.css";
 
 /**
  * Zweiter Geräte-Skin: ICOM IC-M330 (Festeinbau) mit separatem Handmikrofon.
- * NOCH NICHT VERDRAHTET — ohne `handlers` loggen alle Tasten nur in die
- * Konsole (types.ts). Verdrahtung später: Handler-Objekt aus dem
- * SessionContext bauen (pttDown/pttUp, setChannel, DSC …) und hereinreichen;
- * LCD-Inhalte über `lcd` (IcM330LcdProps) aus dem Session-State speisen.
+ * Rein präsentational: `handlers` verdrahtet die Bedienelemente an die Session
+ * (das tut `components/radio/IcM330Panel.tsx`), `lcd` speist die Anzeige. Ohne
+ * `handlers` loggen die Tasten nur in die Konsole (types.ts) — praktisch für
+ * Layout-Reviews des Skins.
  */
 export function IcM330Skin({
   handlers,

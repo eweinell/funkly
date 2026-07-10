@@ -1,0 +1,10 @@
+/* Bezugsrahmen fuer die absolut positionierten DSC-Screens (DscScreens.module.css). */
+.wrap { position: relative; }
+
+.hint {
+  margin-top: 10px;
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--text-dim);
+}

@@ -47,13 +47,17 @@ button { font: inherit; color: inherit; }
   .brand-sub { display: none; }
 }
 
-.lang-switch { display: flex; gap: 2px; }
-.lang-switch button {
+/* Segmentierte Umschalter der Markenleiste (Sprache, Geraete-Skin). */
+.switch-group { display: flex; gap: 2px; }
+.switch-group button {
   font-family: var(--font-label); font-size: 12px; font-weight: 600; letter-spacing: 0.1em;
   padding: 5px 14px; cursor: pointer;
   color: var(--text-dim); background: var(--housing); border: 1px solid var(--bezel);
 }
-.lang-switch button.on { color: var(--lcd-amber); border-color: var(--lcd-amber-dim); background: #1a1a12; }
+.switch-group button.on { color: var(--lcd-amber); border-color: var(--lcd-amber-dim); background: #1a1a12; }
+@media (max-width: 900px) {
+  .switch-group button { padding: 5px 9px; font-size: 11px; letter-spacing: 0.06em; }
+}
 
 /* ---------------- Layout ---------------- */
 

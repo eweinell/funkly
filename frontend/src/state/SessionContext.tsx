@@ -4,6 +4,7 @@ import { AudioSettings, loadAudioSettings, saveAudioSettings } from "../audio/ra
 import { warmupTranscribeClient } from "../audio/transcribe";
 import * as sounds from "../audio/sounds";
 import { initialSessionState, sessionReducer } from "./reducer";
+import { RadioSkin, loadSkin, saveSkin } from "./skin";
 import { SessionState } from "./types";
 import { useTurnEngine } from "./turnActions";
 
@@ -13,6 +14,8 @@ interface SessionContextValue {
   setLanguage: (l: Language) => void;
   panelMode: PanelMode;
   setPanelMode: (m: PanelMode) => void;
+  skin: RadioSkin;
+  setSkin: (s: RadioSkin) => void;
   startScenario: (s: ScenarioInfo) => void;
   endSession: () => void;
   setChannel: (c: Channel) => void;
@@ -31,6 +34,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(sessionReducer, initialSessionState);
   const [language, setLanguageState] = useState<Language>("en");
   const [panelMode, setPanelModeState] = useState<PanelMode>("training");
+  const [skin, setSkinState] = useState<RadioSkin>(() => loadSkin());
   const [audioSettings, setAudioSettingsState] = useState<AudioSettings>(() => loadAudioSettings());
 
   const { pttDown, pttUp, pttLocked, ch70Flash, resetHistory } = useTurnEngine(state, dispatch, language, panelMode);
@@ -44,6 +48,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   const setLanguage = useCallback((l: Language) => setLanguageState(l), []);
   const setPanelMode = useCallback((m: PanelMode) => setPanelModeState(m), []);
+
+  const setSkin = useCallback((s: RadioSkin) => {
+    setSkinState(s);
+    saveSkin(s);
+  }, []);
 
   const setAudioSettings = useCallback((s: AudioSettings) => {
     setAudioSettingsState(s);
@@ -90,6 +99,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setLanguage,
       panelMode,
       setPanelMode,
+      skin,
+      setSkin,
       startScenario,
       endSession,
       setChannel,
@@ -107,6 +118,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setLanguage,
       panelMode,
       setPanelMode,
+      skin,
+      setSkin,
       startScenario,
       endSession,
       setChannel,

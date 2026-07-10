@@ -13,6 +13,8 @@ export interface UiStrings {
   noReplyWrongChannel: (ch: string) => string;
   ch70Blocked: string;
   channelLabel: string;
+  /** Beschriftung der Skin-Umschaltung in der Markenleiste. */
+  skinSwitch: string;
   panelMode: { training: string; compact: string; exam: string };
   verdict: { pass: string; partial: string; fail: string; "n-a": string };
   coachingPrefix: string;
@@ -58,6 +60,7 @@ export const UI: Record<Language, UiStrings> = {
     noReplyWrongChannel: (ch: string) => `SYS: no reply on CH ${ch}`,
     ch70Blocked: "CH70 DSC ONLY",
     channelLabel: "CH",
+    skinSwitch: "Radio",
     panelMode: { training: "Training", compact: "Compact", exam: "Exam" },
     verdict: { pass: "met", partial: "partial", fail: "missed", "n-a": "n/a" },
     coachingPrefix: "Next: ",
@@ -104,6 +107,7 @@ export const UI: Record<Language, UiStrings> = {
     noReplyWrongChannel: (ch: string) => `SYS: keine Antwort auf CH ${ch}`,
     ch70Blocked: "CH70 NUR DSC",
     channelLabel: "CH",
+    skinSwitch: "Funkgerät",
     panelMode: { training: "Training", compact: "Kompakt", exam: "Prüfung" },
     verdict: { pass: "erfüllt", partial: "teilweise", fail: "verfehlt", "n-a": "n/a" },
     coachingPrefix: "Als Nächstes: ",

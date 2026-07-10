@@ -1,38 +1,8 @@
 .wrap { position: relative; }
 
-.panel {
-  position: absolute; z-index: 40; top: 0; right: calc(100% + 12px);
-  width: 260px; padding: 14px;
-  background: var(--housing-hi); border: 1px solid var(--bezel); border-radius: var(--r-md);
-  box-shadow: 0 14px 34px rgba(0,0,0,.6);
-}
-.panelTitle { font-size: 10px; letter-spacing: 0.16em; color: var(--text-dim); margin-bottom: 10px; }
-
-.status { font-family: var(--font-lcd); font-size: 13px; color: var(--lcd-amber); text-align: center; margin: 8px 0; }
-.cancelLink {
-  margin-top: 10px; font-size: 10px; letter-spacing: 0.1em; color: var(--fail);
-  background: none; border: 1px solid var(--fail); border-radius: var(--r-sm);
-  padding: 6px 10px; cursor: pointer; width: 100%;
-}
-.confirmRow { display: flex; gap: 8px; margin-top: 10px; }
-.confirmRow button {
-  flex: 1; padding: 8px; cursor: pointer; font-size: 11px; letter-spacing: 0.08em;
-  background: linear-gradient(180deg, #2b333a, #1a2025); color: var(--text);
-  border: 1px solid #0c0f12; border-radius: var(--r-sm);
-}
-
 .menuToggle {
   font-family: var(--font-label); font-size: 10px; font-weight: 600; letter-spacing: 0.12em;
   padding: 6px 10px; cursor: pointer;
   color: var(--text-dim); background: var(--housing); border: 1px solid var(--bezel);
   border-radius: var(--r-sm); margin-top: 8px;
-}
-
-@media (max-width: 900px) {
-  .panel {
-    position: fixed; inset: 0; right: 0; top: 0;
-    width: auto; border-radius: 0;
-    display: flex; flex-direction: column; justify-content: center;
-    padding: 24px;
-  }
 }

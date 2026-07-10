@@ -9,7 +9,8 @@ import styles from "./IcM330Radio.module.css";
  * Rein präsentational — jede echte Taste ruft ihren Handler aus `types.ts`.
  */
 export function IcM330Radio({ handlers, lcd }: { handlers: IcM330Handlers; lcd?: IcM330LcdProps }) {
-  // Klappzustand der DISTRESS-Abdeckung ist reine Optik und bleibt lokal.
+  // Klappzustand der DISTRESS-Abdeckung: lokal fuer die Optik, zusaetzlich als
+  // Event nach aussen, weil der DSC-Automat mit dem Oeffnen scharf geschaltet wird.
   const [flapOpen, setFlapOpen] = useState(false);
 
   const softkeys: IcM330SoftKeyIndex[] = [0, 1, 2, 3];
@@ -107,12 +108,28 @@ export function IcM330Radio({ handlers, lcd }: { handlers: IcM330Handlers; lcd?:
                 >
                   DISTRESS
                 </button>
-                <button type="button" className={styles.flapClose} aria-label="close cover" onClick={() => setFlapOpen(false)}>
+                <button
+                  type="button"
+                  className={styles.flapClose}
+                  aria-label="close cover"
+                  onClick={() => {
+                    setFlapOpen(false);
+                    handlers.onDistressFlapClose();
+                  }}
+                >
                   ✕
                 </button>
               </>
             ) : (
-              <button type="button" className={styles.flap} aria-label="open DISTRESS cover" onClick={() => setFlapOpen(true)}>
+              <button
+                type="button"
+                className={styles.flap}
+                aria-label="open DISTRESS cover"
+                onClick={() => {
+                  setFlapOpen(true);
+                  handlers.onDistressFlapOpen();
+                }}
+              >
                 DISTRESS
               </button>
             )}

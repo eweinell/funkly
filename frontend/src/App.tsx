@@ -3,7 +3,8 @@ import { Language } from "./api";
 import { useSession } from "./state/SessionContext";
 import { t } from "./i18n";
 import { RadioPanel } from "./components/radio/RadioPanel";
-import { IcM330Skin } from "./components/radio/skins/icm330";
+import { IcM330Panel } from "./components/radio/IcM330Panel";
+import type { RadioSkin } from "./state/skin";
 import { ScenarioPicker } from "./components/training/ScenarioPicker";
 import { Briefing } from "./components/training/Briefing";
 import { PhaseStepper } from "./components/training/PhaseStepper";
@@ -13,8 +14,11 @@ import { MicHelpBanner, isMicPermissionError } from "./components/training/MicHe
 import { useWakeLock } from "./hooks/useWakeLock";
 import styles from "./App.module.css";
 
+const SKIN_LABELS: Record<RadioSkin, string> = { classic: "CLASSIC", icm330: "IC-M330" };
+
 export default function App() {
-  const { state, language, setLanguage, panelMode, setPanelMode, startScenario, endSession } = useSession();
+  const { state, language, setLanguage, panelMode, setPanelMode, skin, setSkin, startScenario, endSession } =
+    useSession();
   const { scenario, scenarios, setup, log, done, phase } = state;
   const busy = state.status !== "idle";
   const strings = t(language);
@@ -33,7 +37,14 @@ export default function App() {
       <header className="brandbar">
         <span className="brand">FUNKLY</span>
         <span className="brand-sub">VHF DSC MARINE TRAINER · SRC</span>
-        <div className="lang-switch" role="group" aria-label="Language">
+        <div className="switch-group" role="group" aria-label={strings.skinSwitch}>
+          {(["classic", "icm330"] as RadioSkin[]).map((s) => (
+            <button key={s} className={s === skin ? "on" : ""} onClick={() => setSkin(s)} disabled={busy}>
+              {SKIN_LABELS[s]}
+            </button>
+          ))}
+        </div>
+        <div className="switch-group" role="group" aria-label="Language">
           {(["en", "de"] as Language[]).map((l) => (
             <button key={l} className={l === language ? "on" : ""} onClick={() => setLanguage(l)} disabled={busy}>
               {l.toUpperCase()}
@@ -43,9 +54,7 @@ export default function App() {
       </header>
 
       <main className="layout">
-        {/* Layout-Vorschau des unverdrahteten IC-M330-Skins (?skin=icm330);
-            Tasten loggen nur in die Konsole. Umschalter kommt mit der Verdrahtung. */}
-        {new URLSearchParams(window.location.search).get("skin") === "icm330" ? <IcM330Skin /> : <RadioPanel />}
+        {skin === "icm330" ? <IcM330Panel /> : <RadioPanel />}
 
         <section className={styles.panel}>
           {!scenario && (

@@ -1,9 +1,9 @@
 /**
  * IC-M330-Skin — Handler-Vertrag für alle REALEN Bedienelemente des Geräts.
- * Noch nichts verdrahtet: Die Komponenten sind rein präsentational und rufen
- * diese Callbacks auf. Spätere Verdrahtung = ein Objekt implementieren und an
- * <IcM330Skin handlers={...}> geben (Session-Aktionen: pttDown/pttUp,
- * setChannel, DSC-Controller usw.).
+ * Die Komponenten sind rein präsentational und rufen nur diese Callbacks auf;
+ * die Verdrahtung an den SessionContext (pttDown/pttUp, setChannel, DSC-Controller)
+ * macht `components/radio/IcM330Panel.tsx`. Was dort nicht belegt wird, fällt auf
+ * die Debug-Logger unten zurück (`withDevFallback`).
  */
 
 /** Softkeys unter dem LCD, links nach rechts (Standby-Belegung: SCAN DW HI/LO CH/WX). */
@@ -24,6 +24,9 @@ export interface IcM330Handlers {
   onClear: () => void;
   /** 16/C (blau): kurz = CH16; lang = Call-Kanal (Long-Press bei Verdrahtung ergänzen). */
   onSixteenC: () => void;
+  /** Rote Klappe über der DISTRESS-Taste (öffnet/schließt den Zugriff). */
+  onDistressFlapOpen: () => void;
+  onDistressFlapClose: () => void;
   /** DISTRESS unter der roten Klappe: am echten Gerät 3 s halten (Down/Up getrennt). */
   onDistressDown: () => void;
   onDistressUp: () => void;
@@ -57,6 +60,8 @@ export const icM330DevHandlers: IcM330Handlers = {
   onMenu: () => console.debug("[IC-M330] MENU"),
   onClear: () => console.debug("[IC-M330] CLR"),
   onSixteenC: () => console.debug("[IC-M330] 16/C"),
+  onDistressFlapOpen: () => console.debug("[IC-M330] DISTRESS flap open"),
+  onDistressFlapClose: () => console.debug("[IC-M330] DISTRESS flap close"),
   onDistressDown: () => console.debug("[IC-M330] DISTRESS down"),
   onDistressUp: () => console.debug("[IC-M330] DISTRESS up"),
   onDialRotate: (d) => console.debug(`[IC-M330] DIAL ${d > 0 ? "cw" : "ccw"}`),
