@@ -4,15 +4,18 @@ import { DEFAULT_MODEL_ID, RubricResult, TurnRequestV2, TurnResponseV2 } from ".
 import { buildDialogPrompt } from "./prompts";
 import {
   advancePhase,
+  advanceToWorkingChannelPhase,
   aggregateOverallScore,
   checkChannel,
   findPhase,
+  isEarlySwitch,
   fallbackRubric,
   getScenario,
   localize,
   reconcileRubric,
   renderChannelTemplate,
   resolveExpectedChannel,
+  sanitizeNoReplyReason,
   Phase,
   Scenario,
   Station,
@@ -35,12 +38,22 @@ export async function handleTurn(req: TurnRequestV2): Promise<TurnResponseV2> {
 
   // Kanal-Mechanik (UI-SPEZIFIKATION §1): bei Abweichung KEIN Bedrock-Call,
   // sondern eine billige "no reply"-Response direkt aus der Engine.
-  const channelCheck = checkChannel(phase, req.channel, req.setup);
+  // `history` entscheidet mit: hat die Station den Arbeitskanal schon zugewiesen,
+  // darf der Trainee dort auch senden, selbst wenn die Phase noch nicht weiter ist.
+  const channelCheck = checkChannel(phase, req.channel, req.setup, req.history);
   if (!channelCheck.ok) {
     return buildNoReplyResponse(scenario, phase, index, defaultStation, channelCheck.reason, req);
   }
 
-  const system = buildDialogPrompt(scenario, phase, req.language, req.setup, req.channel, req.replayCount);
+  const system = buildDialogPrompt(
+    scenario,
+    phase,
+    req.language,
+    req.setup,
+    req.channel,
+    req.replayCount,
+    req.history
+  );
   const messages = [
     ...req.history.map((h) => ({ role: h.role, content: h.content })),
     { role: "user" as const, content: req.transcript },
@@ -55,7 +68,7 @@ export async function handleTurn(req: TurnRequestV2): Promise<TurnResponseV2> {
 
   const text = response.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n");
 
-  const parsed = parseModelTurn(text, scenario, req);
+  const parsed = parseModelTurn(text, scenario, req, isEarlySwitch(phase, req.channel, req.setup, req.history));
 
   const speakingStation = scenario.stations.find((s) => s.id === parsed.stationId) ?? defaultStation;
   const audioBase64 = parsed.reply ? await synthesize(parsed.reply, speakingStation) : "";
@@ -119,7 +132,7 @@ interface ParsedTurn {
 /** Robustes Parsen der Modellantwort (Fallback statt Absturz, wie in M1):
  *  Phasen-Fortschritt und Gesamtscore werden IMMER server-seitig neu berechnet,
  *  nie ungeprueft vom Modell uebernommen (Engine ist massgeblich). */
-function parseModelTurn(text: string, scenario: Scenario, req: TurnRequestV2): ParsedTurn {
+function parseModelTurn(text: string, scenario: Scenario, req: TurnRequestV2, earlySwitch = false): ParsedTurn {
   const { phase, index } = findPhase(scenario, req.phaseId);
   const defaultStation = stationFor(scenario, phase);
 
@@ -148,15 +161,16 @@ function parseModelTurn(text: string, scenario: Scenario, req: TurnRequestV2): P
 
   const reply = String(obj.reply ?? "");
   const stationId = scenario.stations.some((s) => s.id === obj?.stationId) ? String(obj.stationId) : defaultStation.id;
-  const noReplyReasonRaw = obj.noReplyReason as string | undefined;
-  const noReplyReason = (["wrong-channel", "channel-70-voice-blocked", "unintelligible"] as const).includes(
-    noReplyReasonRaw as never
-  )
-    ? (noReplyReasonRaw as TurnResponseV2["noReplyReason"])
-    : undefined;
+  // Kanalbedingte Funkstille darf das Modell nicht selbst ausrufen (s. dort).
+  const noReplyReason = sanitizeNoReplyReason(obj.noReplyReason, reply);
 
   const phaseDone = Boolean(obj.phaseDone);
-  const advance = advancePhase(scenario, index, phaseDone);
+  // Sendet der Trainee bereits auf dem Arbeitskanal, bestimmt sein Kanal die Phase -
+  // nicht das `phaseDone` des Modells, das die Anruf-/Wechselphase sonst beliebig
+  // lange offen halten koennte, waehrend die Station ihn dort laengst hingeschickt hat.
+  const advance = earlySwitch
+    ? advanceToWorkingChannelPhase(scenario, index, req.setup)
+    : advancePhase(scenario, index, phaseDone);
 
   const evalObj = (obj.evaluation ?? {}) as Record<string, unknown>;
   const rubric: RubricResult[] = reconcileRubric(scenario, req.language, evalObj.rubric);

@@ -237,6 +237,32 @@ export function advancePhase(scenario: Scenario, currentIndex: number, phaseDone
   return { newIndex: isLast ? currentIndex : currentIndex + 1, completedPhaseIds, scenarioDone: isLast };
 }
 
+/** Der Trainee sendet auf dem Arbeitskanal (s. `isEarlySwitch`): die Phasen, die den
+ *  Wechsel dorthin vorbereiten, sind damit gegenstandslos. Die Engine setzt den Zeiger
+ *  auf die erste Phase, die tatsaechlich auf dem Arbeitskanal spielt - eine
+ *  Ein-Phasen-Schritt (`phaseDone`) liesse den Trainee sonst noch eine Runde in einer
+ *  Phase haengen, deren Kanal er bereits verlassen hat. Bewertet wird der Fehler
+ *  weiterhin, siehe Dialog-Prompt. */
+export function advanceToWorkingChannelPhase(
+  scenario: Scenario,
+  currentIndex: number,
+  setup?: SessionSetup
+): PhaseAdvance {
+  const working = setup?.workingChannel;
+  const target = scenario.phases.findIndex((p, i) => {
+    if (i < currentIndex || working === undefined) return false;
+    const expected = resolveExpectedChannel(p, setup);
+    return expected !== undefined && normalizeChannel(expected) === normalizeChannel(working);
+  });
+  // Kein Arbeitskanal-Phase gefunden -> normaler Ein-Phasen-Schritt.
+  if (target < 0) return advancePhase(scenario, currentIndex, true);
+  return {
+    newIndex: target,
+    completedPhaseIds: scenario.phases.slice(0, target).map((p) => p.id),
+    scenarioDone: false,
+  };
+}
+
 // -- Kanal-Mechanik (UI-SPEZIFIKATION §1) --
 
 export type ChannelNoReplyReason = "wrong-channel" | "channel-70-voice-blocked";
@@ -259,39 +285,85 @@ export function resolveExpectedChannel(phase: Phase, setup?: SessionSetup): Chan
   return phase.expectedChannel;
 }
 
+export interface HistoryEntry {
+  role: "user" | "assistant";
+  content: string;
+}
+
+/** Hat die Gegenstelle den Arbeitskanal im bisherigen Funkverkehr bereits genannt?
+ *  Geprueft wird nur, was die Station gesendet hat (`assistant`), und nur die Form
+ *  "channel/Kanal <Nummer>" - eine nackte Ziffer im Fliesstext ist keine Zuweisung.
+ *  `\b` verhindert, dass "channel sixteen" als Kanal 6 durchgeht. */
+export function stationAnnouncedChannel(history: HistoryEntry[] | undefined, channel: Channel): boolean {
+  if (!history?.length) return false;
+  const forms = [String(channel), spokenChannel(channel, "en"), spokenChannel(channel, "de")];
+  const alternatives = forms.map((f) => f.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+  const named = new RegExp(`(channel|kanal)\\s+(${alternatives})\\b`, "i");
+  return history.some((h) => h.role === "assistant" && named.test(h.content));
+}
+
 /**
- * "Frueher Wechsel": In einer `switch-channel`-Phase wird der Kanalwechsel gerade
- * verhandelt. Der Trainee darf die Quittung noch auf dem Anrufkanal geben ODER
- * bereits auf den Arbeitskanal gedreht haben - beides bekommt eine Antwort.
+ * "Frueher Wechsel": der Trainee sendet auf dem Arbeitskanal, obwohl die aktuelle
+ * Phase ihn noch auf dem Anrufkanal erwartet. Toleriert wird das in zwei Faellen:
  *
- * Sonst sitzt er fest: ein Turn auf falschem Kanal bekommt keine Antwort und
- * schiebt die Phase nicht weiter, d. h. wer erst dreht und dann bestaetigt,
- * kaeme aus der Phase nie wieder heraus. Die fehlende Quittung auf dem
- * Anrufkanal ist deshalb ein BEWERTUNGSfehler (Kanaldisziplin), keine
- * Funkstille - der Dialog-Prompt bekommt dafuer einen expliziten Hinweis.
+ *  - die Phase verhandelt den Wechsel ohnehin gerade (`switch-channel`), oder
+ *  - die Station hat den Arbeitskanal im Funkverkehr bereits genannt.
+ *
+ * Der zweite Fall ist der wichtige: der Phasenzeiger rueckt nur vor, wenn das
+ * Dialogmodell `phaseDone` setzt. Haelt es die Anrufphase fuer unvollstaendig
+ * (z. B. weil der Trainee keinen Kanal vorgeschlagen hat), hat die Station ihm
+ * den Arbeitskanal aber laengst zugewiesen, dann befolgt er eine Anweisung, die
+ * die Engine ihm nicht mehr zugesteht - und bekommt Funkstille auf genau dem
+ * Kanal, auf den die Station ihn geschickt hat. Was auf dem Kanal gesagt wurde,
+ * schlaegt hier den Phasenzeiger. Bewertet wird der Verfahrensfehler trotzdem
+ * (Kanaldisziplin), dafuer bekommt der Dialog-Prompt einen expliziten Hinweis.
  */
-export function isEarlySwitch(phase: Phase, channel: Channel, setup?: SessionSetup): boolean {
-  if (phase.expect !== "switch-channel") return false;
-  const expected = resolveExpectedChannel(phase, setup);
+export function isEarlySwitch(
+  phase: Phase,
+  channel: Channel,
+  setup?: SessionSetup,
+  history?: HistoryEntry[]
+): boolean {
   const working = setup?.workingChannel;
+  const expected = resolveExpectedChannel(phase, setup);
   if (expected === undefined || working === undefined) return false;
   // Phase erwartet ohnehin schon den Arbeitskanal -> nichts zu tolerieren.
   if (normalizeChannel(expected) === normalizeChannel(working)) return false;
-  return normalizeChannel(channel) === normalizeChannel(working);
+  // Toleriert wird ausschliesslich der Arbeitskanal, kein beliebiger anderer.
+  if (normalizeChannel(channel) !== normalizeChannel(working)) return false;
+  if (phase.expect === "switch-channel") return true;
+  return stationAnnouncedChannel(history, working);
 }
 
-export function checkChannel(phase: Phase, channel: Channel, setup?: SessionSetup): ChannelCheck {
+export function checkChannel(
+  phase: Phase,
+  channel: Channel,
+  setup?: SessionSetup,
+  history?: HistoryEntry[]
+): ChannelCheck {
   const normalized = normalizeChannel(channel);
   if (normalized === "70" && !DSC_PHASE_TYPES.has(phase.expect)) {
     return { ok: false, reason: "channel-70-voice-blocked" };
   }
-  if (isEarlySwitch(phase, channel, setup)) return { ok: true };
+  if (isEarlySwitch(phase, channel, setup, history)) return { ok: true };
   const expected = resolveExpectedChannel(phase, setup);
   if (expected === undefined) return { ok: true };
   if (normalizeChannel(expected) !== normalized) {
     return { ok: false, reason: "wrong-channel" };
   }
   return { ok: true };
+}
+
+/**
+ * Funkstille wegen des Kanals gehoert ALLEIN der Engine (`checkChannel` laeuft
+ * vor dem Modellaufruf). Reklamiert das Modell selbst "wrong-channel" - etwa
+ * weil der Trainee beim Zurueckreden einen falschen Kanal genannt hat -, schwiege
+ * die Station auf einem Kanal, auf dem sie zu antworten hat, und die Phase
+ * bliebe stehen. Aus der Modellantwort ueberlebt daher nur der inhaltliche
+ * Grund "unintelligible", und der nur zusammen mit einer leeren Antwort.
+ */
+export function sanitizeNoReplyReason(raw: unknown, reply: string): "unintelligible" | undefined {
+  return raw === "unintelligible" && !reply.trim() ? "unintelligible" : undefined;
 }
 
 // -- Arbeitskanal-Platzhalter im Content --

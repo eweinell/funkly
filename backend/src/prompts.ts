@@ -17,7 +17,7 @@
  */
 import type { Channel, Language } from "./contracts";
 import { isEarlySwitch, renderChannelTemplate, resolveExpectedChannel, spokenChannel } from "./scenarios";
-import type { Phase, Scenario, SessionSetup } from "./scenarios";
+import type { HistoryEntry, Phase, Scenario, SessionSetup } from "./scenarios";
 import { localize } from "./scenarios";
 
 export interface SystemBlock {
@@ -65,6 +65,11 @@ PROWORD DISCIPLINE (react in character, do not explain):
 REPLY RULES:
 - Stay strictly in character. Keep replies short and realistic. No stage
   directions, no meta-commentary, no scoring in the reply.
+- NEVER go silent over a channel. Whether the trainee is reachable on their
+  selected channel is decided by the engine before you are called; if you are
+  answering at all, they can hear you. A wrong channel spoken by the trainee is
+  a mistake to correct in character and to fault in "evaluation" - not a reason
+  to withhold a reply.
 
 EVALUATION RULES:
 - Grade the trainee's transmission (not your own reply) against every rubric id
@@ -86,7 +91,7 @@ EVALUATION RULES:
 OUTPUT (single JSON object):
 {"reply": "<your radio transmission, or empty string if you do not answer>",
  "stationId": "<id of the answering station>",
- "noReplyReason": "<omit, or one of: wrong-channel | channel-70-voice-blocked | unintelligible>",
+ "noReplyReason": "<omit; only \"unintelligible\", and only with an empty reply>",
  "phaseId": "<id of the phase the exchange is in AFTER this turn>",
  "phaseDone": <true if this phase's expected action is complete, else false>,
  "done": <true when the whole exercise is complete, else false>,
@@ -155,11 +160,15 @@ and a per-phase direction. Track which phase the exchange is in and set phaseId
 / phaseDone / done accordingly.
 ${phasesBlock}
 
-CHANNEL MECHANIC: The trainee's currently selected channel is provided per turn
-(see Block C). If it does not match the active phase's expectedChannel, DO NOT
-answer: return reply="" and the matching noReplyReason ("wrong-channel"; use
-"channel-70-voice-blocked" if the selected channel is 70). Otherwise answer
-normally. (The engine also enforces this deterministically before calling you.)
+CHANNEL MECHANIC: The engine checks the trainee's selected channel (Block C)
+against the active phase BEFORE calling you, and stays silent for them when it
+does not match. So if you are being asked for a reply at all, the trainee is
+reachable on their channel: ALWAYS answer. Never return an empty reply because
+of a channel, and never set noReplyReason to a channel reason - that is the
+engine's decision, not yours. If the trainee reads back or names a channel other
+than the session working channel, they are still audible: correct them in
+character ("negative, channel <session channel>, over") and fault it under
+channel discipline in "evaluation".
 
 RUBRIC (grade each; ids are a stable contract - echo them verbatim):
 ${rubricBlock}${sample}`;
@@ -181,12 +190,14 @@ function buildDialogBlockC(
   const earlySwitchLine =
     earlySwitchFrom !== undefined
       ? `\nEARLY CHANNEL SWITCH: the trainee is already transmitting on the working
-channel, although this phase still expects the readback and acknowledgement on
-channel ${String(earlySwitchFrom)}. Answer in character on the working channel and let the
-exercise continue - do NOT stay silent and do NOT set noReplyReason. In
-"evaluation" this is a FAULT, never "pass": under the channel-discipline
-criterion, record that the trainee left channel ${String(earlySwitchFrom)} without reading back and
-acknowledging the assigned working channel there. Say so in the finding.`
+channel, although the current phase still expects them on channel ${String(earlySwitchFrom)}. They have
+followed the channel you assigned, so they are audible: answer in character on
+the working channel, treat the unfinished business of channel ${String(earlySwitchFrom)} as settled,
+and carry the exercise forward from here. Do NOT stay silent, do NOT set
+noReplyReason, and do NOT send them back to channel ${String(earlySwitchFrom)}. The engine has already
+moved the exercise to the working-channel phase. In "evaluation" this is a FAULT, never "pass": under the
+channel-discipline criterion, record that the trainee left channel ${String(earlySwitchFrom)} without
+properly reading back and acknowledging the assigned working channel there.`
       : "";
   // Der Arbeitskanal wird je Session gezogen; die Engine prueft gegen genau
   // diesen Wert. Nennt die Station einen anderen, laeuft der Trainee in ein
@@ -200,7 +211,10 @@ acknowledging the assigned working channel there. Say so in the finding.`
 When a phase direction tells you to assign, propose or agree a working channel,
 name exactly this channel and no other - not one from an example, not one the
 trainee suggested. Name a different one and the trainee will switch to a channel
-the engine never answers on, which dead-ends the exercise.`
+the engine never answers on, which dead-ends the exercise.
+If the trainee reads back a DIFFERENT channel, answer and correct them in
+character ("negative, channel ${spokenChannel(setup.workingChannel)}, over"),
+and fault the wrong readback under channel discipline. Do not go silent.`
       : "";
   return `Trainee vessel this session: ${setup.vessel}, callsign ${setup.callsign},
 MMSI ${setup.mmsi}, position ${setup.position}.
@@ -215,12 +229,14 @@ export function buildDialogPrompt(
   language: Language,
   setup: SessionSetup,
   channel: unknown,
-  replayCount?: number
+  replayCount?: number,
+  history?: HistoryEntry[]
 ): SystemBlock[] {
-  // Kanal des laufenden Turns (die Engine hat ihn bereits durchgelassen): steht er
-  // bei einer switch-channel-Phase schon auf dem Arbeitskanal, fehlt die Quittung
-  // auf dem Anrufkanal - das muss das Modell wissen, um es zu bemaengeln.
-  const earlySwitchFrom = isEarlySwitch(phase, channel as Channel, setup)
+  // Kanal des laufenden Turns (die Engine hat ihn bereits durchgelassen): sendet
+  // der Trainee schon auf dem Arbeitskanal, obwohl die Phase ihn auf dem
+  // Anrufkanal erwartet, fehlt die Quittung dort - das muss das Modell wissen,
+  // um es zu bemaengeln, statt die Phase weiter zu blockieren.
+  const earlySwitchFrom = isEarlySwitch(phase, channel as Channel, setup, history)
     ? resolveExpectedChannel(phase, setup)
     : undefined;
   return [

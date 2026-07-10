@@ -139,20 +139,119 @@ step("checkChannel: switch-channel-Phase akzeptiert Anrufkanal UND Arbeitskanal"
   assert.equal(scenarios.isEarlySwitch(switchPhase, 26, undefined), false);
 });
 
+// Regression: der Phasenzeiger rueckt nur auf `phaseDone` des Modells vor. Hielt es
+// die Anrufphase fuer unvollstaendig, obwohl die Station den Arbeitskanal schon
+// zugewiesen hatte, bekam der Trainee Funkstille auf genau dem Kanal, auf den die
+// Station ihn geschickt hatte (UC-03: "Channel six, over" -> no reply on CH 6).
+step("stationAnnouncedChannel: nur Sendungen der Station, nur 'channel <nr>'", () => {
+  const said = (content) => [{ role: "assistant", content }];
+  assert.equal(scenarios.stationAnnouncedChannel(said("Calypso, this is Orion, channel six, over."), 6), true);
+  assert.equal(scenarios.stationAnnouncedChannel(said("change to channel 26, over"), 26), true);
+  assert.equal(scenarios.stationAnnouncedChannel(said("wechseln Sie auf Kanal zwei-sechs"), 26), true);
+
+  // "channel sixteen" ist nicht Kanal 6.
+  assert.equal(scenarios.stationAnnouncedChannel(said("stay on channel sixteen"), 6), false);
+  assert.equal(scenarios.stationAnnouncedChannel(said("channel 16, over"), 6), false);
+  // Eine nackte Zahl im Fliesstext ist keine Kanalzuweisung.
+  assert.equal(scenarios.stationAnnouncedChannel(said("we are 6 miles north"), 6), false);
+  // Was der Trainee sagt, zaehlt nicht - nur was die Station gesendet hat.
+  assert.equal(scenarios.stationAnnouncedChannel([{ role: "user", content: "channel six, over" }], 6), false);
+  assert.equal(scenarios.stationAnnouncedChannel(undefined, 6), false);
+});
+
+step("checkChannel: nach zugewiesenem Arbeitskanal antwortet die Station dort in JEDER Phase", () => {
+  const setup = { vessel: "CALYPSO", callsign: "DK2077", mmsi: "211423658", position: "x", workingChannel: 6 };
+  const callPhase = { id: "call", expect: "call", label: { en: "x", de: "x" }, expectedChannel: 16 };
+  const assigned = [{ role: "assistant", content: "Calypso, this is Orion, channel six, over." }];
+
+  // Vor der Zuweisung: Kanal 6 in der Anrufphase bleibt stumm (kein Vorpreschen).
+  assert.equal(scenarios.checkChannel(callPhase, 6, setup, []).reason, "wrong-channel");
+  assert.equal(scenarios.isEarlySwitch(callPhase, 6, setup, []), false);
+
+  // Nach der Zuweisung: der Trainee darf dort senden, auch wenn die Phase haengt.
+  assert.equal(scenarios.checkChannel(callPhase, 6, setup, assigned).ok, true);
+  assert.equal(scenarios.isEarlySwitch(callPhase, 6, setup, assigned), true);
+
+  // Ein anderer Kanal bleibt auch nach der Zuweisung stumm.
+  assert.equal(scenarios.checkChannel(callPhase, 60, setup, assigned).reason, "wrong-channel");
+});
+
+step("advanceToWorkingChannelPhase: springt auf die erste Phase des Arbeitskanals", () => {
+  const scenario = scenarios.getScenario("ship-to-ship");
+  const setup = { vessel: "CALYPSO", callsign: "DK2077", mmsi: "211423658", position: "x", workingChannel: 6 };
+  const workingIndex = scenario.phases.findIndex((p) => p.expectedChannel === "working");
+
+  // Aus der haengenden Anrufphase (Index 0) direkt auf die Arbeitskanal-Phase.
+  const jumped = scenarios.advanceToWorkingChannelPhase(scenario, 0, setup);
+  assert.equal(jumped.newIndex, workingIndex);
+  assert.equal(jumped.scenarioDone, false);
+  assert.deepEqual(
+    jumped.completedPhaseIds,
+    scenario.phases.slice(0, workingIndex).map((p) => p.id),
+    "die uebersprungenen Phasen gelten als erledigt"
+  );
+
+  // Steht der Trainee schon auf der Arbeitskanal-Phase, bleibt der Zeiger dort.
+  assert.equal(scenarios.advanceToWorkingChannelPhase(scenario, workingIndex, setup).newIndex, workingIndex);
+
+  // Ohne Arbeitskanal-Phase: normaler Ein-Phasen-Schritt.
+  const radio = scenarios.getScenario("radio-check");
+  assert.equal(scenarios.advanceToWorkingChannelPhase(radio, 0, setup).newIndex, 1);
+});
+
 step("Block C: frueher Kanalwechsel wird dem Modell als Bewertungsfehler angesagt", () => {
   const scenario = scenarios.getScenario("routine-coast-call");
   const phase = scenario.phases.find((p) => p.expect === "switch-channel");
   const setup = { vessel: "TARA", callsign: "DM3082", mmsi: "211423658", position: "x", workingChannel: 26 };
 
-  const early = prompts.buildDialogPrompt(scenario, phase, "en", setup, 26, 0)[2].text;
+  // Zeilenumbrueche im Prompt sind Layout, nicht Inhalt: flach vergleichen.
+  const flat = (s) => s.replace(/\s+/g, " ");
+  const early = flat(prompts.buildDialogPrompt(scenario, phase, "en", setup, 26, 0)[2].text);
   assert.ok(early.includes("EARLY CHANNEL SWITCH"), "Hinweis fehlt");
   assert.ok(early.includes("do NOT set noReplyReason"), "Modell darf hier nicht schweigen");
+  assert.ok(early.includes("do NOT send them back to channel 16"), "kein Zurueckschicken auf 16");
   assert.ok(/FAULT, never "pass"/.test(early), "muss als Fehler gewertet werden");
   assert.ok(early.includes("channel 16"), "der Anrufkanal muss benannt sein");
 
   // Auf dem Anrufkanal (regulaerer Weg) darf der Hinweis nicht erscheinen.
-  const regular = prompts.buildDialogPrompt(scenario, phase, "en", setup, 16, 0)[2].text;
+  const regular = flat(prompts.buildDialogPrompt(scenario, phase, "en", setup, 16, 0)[2].text);
   assert.ok(!regular.includes("EARLY CHANNEL SWITCH"));
+
+  // Haengende Anrufphase + bereits zugewiesener Kanal: derselbe Hinweis, aus der History.
+  const callPhase = scenario.phases[0];
+  const assigned = [{ role: "assistant", content: "Bluebird, this is Lyngby Radio, change to channel two-six, over." }];
+  const viaHistory = flat(prompts.buildDialogPrompt(scenario, callPhase, "en", setup, 26, 0, assigned)[2].text);
+  assert.ok(viaHistory.includes("EARLY CHANNEL SWITCH"), "History-Fall fehlt");
+  // Ohne History keine Toleranz - der Trainee darf der Anrufphase nicht vorpreschen.
+  const noHistory = flat(prompts.buildDialogPrompt(scenario, callPhase, "en", setup, 26, 0, [])[2].text);
+  assert.ok(!noHistory.includes("EARLY CHANNEL SWITCH"));
+});
+
+// Regression: das Modell rief auf einem Kanal, den die Engine gerade freigegeben
+// hatte, selbst "wrong-channel" aus (weil der Trainee sich beim Zurueckreden
+// verhaspelte). Die Station schwieg, die Phase blieb stehen - Sackgasse.
+step("sanitizeNoReplyReason: Kanalgruende aus der Modellantwort werden verworfen", () => {
+  assert.equal(scenarios.sanitizeNoReplyReason("wrong-channel", ""), undefined);
+  assert.equal(scenarios.sanitizeNoReplyReason("channel-70-voice-blocked", ""), undefined);
+  assert.equal(scenarios.sanitizeNoReplyReason("unintelligible", ""), "unintelligible");
+  // "unintelligible" mit Antworttext ist widerspruechlich -> Antwort gewinnt.
+  assert.equal(scenarios.sanitizeNoReplyReason("unintelligible", "say again, over"), undefined);
+  assert.equal(scenarios.sanitizeNoReplyReason(undefined, "roger, out"), undefined);
+  assert.equal(scenarios.sanitizeNoReplyReason("nonsense", ""), undefined);
+});
+
+step("Prompt: das Modell wird nicht mehr zur eigenen Kanalpruefung aufgefordert", () => {
+  const scenario = scenarios.getScenario("ship-to-ship");
+  const setup = { vessel: "PELIKAN", callsign: "DM3082", mmsi: "211423658", position: "x", workingChannel: 6 };
+  const blocks = prompts.buildDialogPrompt(scenario, scenario.phases[0], "en", setup, 16, 0);
+  const [blockA, blockB] = blocks.map((b) => b.text);
+
+  assert.ok(!/return reply="" and the matching noReplyReason/.test(blockB));
+  assert.ok(/ALWAYS answer/.test(blockB), "Block B muss zum Antworten verpflichten");
+  assert.ok(/never set noReplyReason to a channel reason/.test(blockB));
+  assert.ok(/NEVER go silent over a channel/.test(blockA), "Block A muss die Regel tragen");
+  // Block A darf die Kanalgruende nicht mehr als gueltige Ausgabe anbieten.
+  assert.ok(!/noReplyReason.*wrong-channel/.test(blockA));
 });
 
 step("randomSetup: zieht den Arbeitskanal aus dem Pool, sonst undefined", () => {
